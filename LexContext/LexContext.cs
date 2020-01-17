@@ -9,10 +9,10 @@ namespace LC
 	/// <summary>
 	/// Represents an exception encountered while lexing or parsing from an input source
 	/// </summary>
-	public sealed class LexException : Exception
+	public sealed class ExpectingException : Exception
 	{
 		/// <summary>
-		/// Creates a new <see cref="LexException" />
+		/// Creates a new <see cref="ExpectingException" />
 		/// </summary>
 		/// <param name="message">The error message - this will be appended with the location information</param>
 		/// <param name="line">The one based line number where the exception occured</param>
@@ -20,7 +20,7 @@ namespace LC
 		/// <param name="position">The zero based position where the exception occured</param>
 		/// <param name="fileOrUrl">The file or URL in which the exception occured</param>
 		/// <param name="expecting">A list of expected symbols or characters</param>
-		public LexException(string message,int line,int column,long position,string fileOrUrl, params string[] expecting) : base(
+		public ExpectingException(string message,int line,int column,long position,string fileOrUrl, params string[] expecting) : base(
 			_GetMessage(message,line,column,position,fileOrUrl))
 		{
 			Line = line;
@@ -243,7 +243,7 @@ namespace LC
 				CaptureBuffer.Append((char)_current);
 		}
 		/// <summary>
-		/// Verifies that one of the specified characters is under the input cursor. If it isn't, a <see cref="LexException" /> is raised.
+		/// Verifies that one of the specified characters is under the input cursor. If it isn't, a <see cref="ExpectingException" /> is raised.
 		/// </summary>
 		/// <param name="expecting">The list of expected characters. If empty, anything but end of input is accepted. If <see cref="EndOfInput" /> is included, end of input is accepted.</param>
 		[System.Diagnostics.DebuggerHidden()]
@@ -251,20 +251,20 @@ namespace LC
 		{
 			_CheckDisposed();
 			if (BeforeInput == _current)
-				throw new LexException("The cursor is before the beginning of the input", _line, _column, _position, _fileOrUrl);
+				throw new ExpectingException("The cursor is before the beginning of the input", _line, _column, _position, _fileOrUrl);
 			switch (expecting.Length)
 			{
 				case 0:
 					if (EndOfInput == _current)
-						throw new LexException("Unexpected end of input",_line,_column,_position,_fileOrUrl);
+						throw new ExpectingException("Unexpected end of input",_line,_column,_position,_fileOrUrl);
 					break;
 				case 1:
 					if (expecting[0] != _current)
-						throw new LexException(_GetErrorMessage(expecting), _line, _column, _position, _fileOrUrl,_GetErrorExpecting(expecting));
+						throw new ExpectingException(_GetErrorMessage(expecting), _line, _column, _position, _fileOrUrl,_GetErrorExpecting(expecting));
 					break;
 				default:
 					if(0>Array.IndexOf(expecting,_current))
-						throw new LexException(_GetErrorMessage(expecting), _line, _column, _position, _fileOrUrl,_GetErrorExpecting(expecting));
+						throw new ExpectingException(_GetErrorMessage(expecting), _line, _column, _position, _fileOrUrl,_GetErrorExpecting(expecting));
 					break;
 			}
 		}
