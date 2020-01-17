@@ -158,6 +158,7 @@ namespace LexContextDemo
 			}
 			if ("[" == delim)
 				writer.Write(delim);
+			
 			writer.Write("]");
 		}
 

@@ -9,7 +9,10 @@ namespace LC
 	/// <summary>
 	/// Represents an exception encountered while lexing or parsing from an input source
 	/// </summary>
-	public sealed class ExpectingException : Exception
+#if LCLIB
+	public 
+#endif
+	sealed class ExpectingException : Exception
 	{
 		/// <summary>
 		/// Creates a new <see cref="ExpectingException" />
@@ -408,7 +411,7 @@ namespace LC
 			if (Disposed == _current)
 				throw new ObjectDisposedException(typeof(LexContext).Name);
 		}
-		#region _TextReaderLexContext
+#region _TextReaderLexContext
 		private sealed class _TextReaderLexContext : LexContext
 		{
 			TextReader _inner;
@@ -425,8 +428,8 @@ namespace LC
 				_inner.Close();
 			}
 		}
-		#endregion
-		#region _CharEnumeratorLexContext
+#endregion
+#region _CharEnumeratorLexContext
 		private sealed class _CharEnumeratorLexContext : LexContext
 		{
 			IEnumerator<char> _inner;
@@ -445,6 +448,6 @@ namespace LC
 				_inner.Dispose();
 			}
 		}
-		#endregion
+#endregion
 	}
 }
