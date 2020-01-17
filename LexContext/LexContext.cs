@@ -384,10 +384,10 @@ namespace LC
 			{
 				case '\n':
 					++_line;
-					_column = 1;
+					_column = 0;
 					break;
 				case '\r':
-					_column = 1;
+					_column = 0;
 					break;
 				case '\t':
 					_column += TabWidth;
