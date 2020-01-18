@@ -38,27 +38,25 @@ namespace L
 			int sp=0;
 			var sb = new StringBuilder(64);
 			IList<int> saved, matched;
-			var maxfibers = 0;
 			matched = null;
 			saved = new List<int>(2);
 			clist = new List<_Fiber>(prog.Length);
 			nlist = new List<_Fiber>(prog.Length);
 			_EnqueueFiber(clist, new _Fiber(prog,0, saved), 0);
-			maxfibers = clist.Count;
 			matched = null;
 			var cur = -1;
 			if(LexContext.EndOfInput!=input.Current)
 			{
 				var ch1 = unchecked((char)input.Current);
-				var ch2 = '\0';
 				if (char.IsHighSurrogate(ch1))
 				{
-					input.Advance();
-					ch2 = unchecked((char)input.Current);
+					if (-1 == input.Advance())
+						throw new ExpectingException("Expecting low surrogate in unicode stream. The input source is corrupt or not valid Unicode",input.Line,input.Column,input.Position,input.FileOrUrl) ;
+					var ch2 = unchecked((char)input.Current);
 					cur = char.ConvertToUtf32(ch1, ch2);
 				}
 				else
-					cur = (int)ch1;
+					cur = ch1;
 				
 			}
 			
@@ -126,30 +124,26 @@ namespace L
 				}
 				if (passed)
 				{
-					var s = char.ConvertFromUtf32(cur);
-					sb.Append(s);
+					sb.Append(char.ConvertFromUtf32(cur));
 					input.Advance();
 					if (LexContext.EndOfInput != input.Current)
 					{
 						var ch1 = unchecked((char)input.Current);
-						var ch2 = '\0';
 						if (char.IsHighSurrogate(ch1))
 						{
 							input.Advance();
+							if (-1 == input.Advance())
+								throw new ExpectingException("Expecting low surrogate in unicode stream. The input source is corrupt or not valid Unicode", input.Line, input.Column, input.Position, input.FileOrUrl);
 							++sp;
-							ch2 = unchecked((char)input.Current);
+							var ch2 = unchecked((char)input.Current);
 							cur = char.ConvertToUtf32(ch1, ch2);
 						}
 						else
-							cur = (int)ch1;
+							cur = ch1;
 						
 					}
 					++sp;
 				}
-				if (clist.Count > maxfibers)
-					maxfibers = clist.Count;
-				if (nlist.Count > maxfibers)
-					maxfibers = nlist.Count; // sanity
 				tmp = clist;
 				clist = nlist;
 				nlist = tmp;
