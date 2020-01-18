@@ -15,7 +15,6 @@ namespace LexDemo
 			var prog = Regex.CompileLexer(
 				@"[A-Z_a-z][A-Z_a-z0-9]*", // id
 				@"0|(\-?[1-9][0-9]*)", // int
-				@"\.", // dot
 				@"[ \t\r\n\v\f]" // space
 			);
 			

@@ -37,26 +37,31 @@ namespace L
 			int[] inst,jmp;
 			switch(ast.Kind)
 			{
-				case Ast.Lit:
+				case Ast.Lit: // literal value
 					// char <ast.Value>
 					inst = new int[2];
 					inst[0] = Char;
 					inst[1] = ast.Value;
 					prog.Add(inst);
 					break;
-				case Ast.Cat:
+				case Ast.Cat: // concatenation
 					if(null!=ast.Left)
 						EmitPart(ast.Left,prog);
 					if(null!=ast.Right)
 						EmitPart(ast.Right,prog);
 					break;
-				case Ast.Alt:
+				case Ast.Alt: // alternation
+					// first handle the cases where one
+					// of the children is null such as
+					// in (foo|) or (|foo)
 					if (null == ast.Right)
 					{
 						if (null == ast.Left)
 						{
+							// both are null ex: (|) - do nothing
 							return;
 						}
+						// we have to choose empty or Left
 						// split <i>, <<next>>
 						inst = new int[3];
 						inst[0] = Split;
@@ -69,35 +74,46 @@ namespace L
 					}
 					if (null == ast.Left)
 					{
+						// we have to choose empty or Right
 						// split <i>, <<next>>
 						inst = new int[3];
 						inst[0] = Split;
 						prog.Add(inst);
 						var i = prog.Count;
+						// emit the right part
 						EmitPart(ast.Right, prog);
 						inst[1] = i;
 						inst[2] = prog.Count;
 						return;
 					}
-					else
+					else // both Left and Right are filled ex: (foo|bar)
 					{
+						// we have to choose/split between left and right
 						// split <pc>, <<next>>
 						inst = new int[3];
 						inst[0] = Split;
 						prog.Add(inst);
 						inst[1] = prog.Count;
+						// emit the left hand side
 						EmitPart(ast.Left, prog);
+						// we have to skip past the alternate
+						// that comes next, so we jump
 						// jmp <<next>>
 						jmp = new int[2];
 						jmp[0] = Jmp;
 						prog.Add(jmp);
 						inst[2]= prog.Count;
+						// emit the right hand side
 						EmitPart(ast.Right,prog);
 						jmp[1] = prog.Count;
 					}
 					break;
 				case Ast.NSet:
 				case Ast.Set:
+					// generate a set or nset instruction
+					// with all the packed ranges
+					// which we first sort to ensure they're 
+					// all arranged from low to high
 					// (n)set packedRange1Left, packedRange1Right, packedRange2Left, packedRange2Right...
 					inst = new int[ast.Ranges.Length + 1];
 					inst[0] = (ast.Kind==Ast.Set)?Set:NSet;
@@ -107,6 +123,8 @@ namespace L
 					break;
 				case Ast.NUCode:
 				case Ast.UCode:
+					// generate a ucode or ncode instruction
+					// with the given unicode category value
 					// (n)ucode <ast.Value>
 					inst = new int[2];
 					inst[0] = (ast.Kind == Ast.UCode) ? UCode : NUCode;
@@ -115,12 +133,14 @@ namespace L
 					break;
 				case Ast.Opt:
 					if (null == ast.Left)
-						return;
+						return; // empty ex: ()? do nothing
 					inst = new int[3];
+					// we have to choose betweed Left or empty
 					// split <pc>, <<next>>
 					inst[0] = Split;
 					prog.Add(inst);
 					inst[1] = prog.Count;
+					// emit Left
 					EmitPart(ast.Left, prog);
 					inst[2] = prog.Count;
 					if (ast.IsLazy)
@@ -131,6 +151,7 @@ namespace L
 						inst[2] = t;
 					}
 					break;
+				// the next two forward to Rep
 				case Ast.Star:
 					ast.Min = 0;
 					ast.Max = 0;
@@ -140,6 +161,14 @@ namespace L
 					ast.Max = 0;
 					goto case Ast.Rep;
 				case Ast.Rep:
+					// TODO: There's an optimization opportunity
+					// here wherein we can make the rep instruction
+					// take min and max values, or make a condition
+					// branch instruction take a loop count. We don't
+					//
+					// we need to generate a series of matches
+					// based on the min and max values
+					// this gets complicated
 					if (ast.Min > 0 && ast.Max > 0 && ast.Min > ast.Max)
 						throw new ArgumentOutOfRangeException("Max");
 					if (null == ast.Left)
@@ -154,6 +183,7 @@ namespace L
 						case 0:
 							switch (ast.Max)
 							{
+								// kleene * ex: (foo)*
 								case -1:
 								case 0:
 									idx = prog.Count;
@@ -174,6 +204,7 @@ namespace L
 										inst[2] = t;
 									}
 									return;
+									// opt ex: (foo)?
 								case 1:
 									opt = new Ast();
 									opt.Kind = Ast.Opt;
@@ -181,7 +212,7 @@ namespace L
 									opt.IsLazy = ast.IsLazy;
 									EmitPart(opt,prog);
 									return;
-								default:
+								default: // ex: (foo){,10}
 									opt = new Ast();
 									opt.Kind = Ast.Opt;
 									opt.Left = ast.Left;
@@ -196,6 +227,7 @@ namespace L
 						case 1:
 							switch (ast.Max)
 							{
+								// plus ex: (foo)+
 								case -1:
 								case 0:
 									idx = prog.Count;
@@ -214,9 +246,11 @@ namespace L
 									}
 									return;
 								case 1:
+									// no repeat ex: (foo)
 									EmitPart(ast.Left, prog);
 									return;
 								default:
+									// repeat ex: (foo){1,10}
 									rep = new Ast();
 									rep.Min = 0;
 									rep.Max = ast.Max -1;
@@ -226,9 +260,10 @@ namespace L
 									EmitPart(rep, prog);
 									return;
 							}
-						default:
+						default: // bounded minum
 							switch (ast.Max)
 							{
+								// repeat ex: (foo) {10,}
 								case -1:
 								case 0:
 									for (var i = 0; i < ast.Min; ++i)
@@ -239,10 +274,10 @@ namespace L
 									rep.IsLazy = ast.IsLazy;
 									EmitPart(rep,prog);
 									return;
-								case 1:
+								case 1: // invalid or handled prior
 									// should never get here
 									throw new NotImplementedException();
-								default:
+								default: // repeat ex: (foo){10,12}
 									for (var i = 0; i < ast.Min; ++i)
 										EmitPart(ast.Left, prog);
 									if (ast.Min== ast.Max)
@@ -393,39 +428,52 @@ namespace L
 		{
 			var prog = new List<int[]>();
 			int[] match, save;
-			var sp = new int[expressions.Length + 2];
-			sp[0] = Compiler.Split;
-			prog.Add(sp);
+			// generate the primary split instruction
+			var split = new int[expressions.Length + 2];
+			split[0] = Compiler.Split;
+			prog.Add(split);
+			// for each expressions, render a save 0
+			// followed by the the instructions
+			// followed by save 1, and then match <i>
 			for (var i = 0; i < expressions.Length; i++)
 			{
-				sp[i + 1] = prog.Count;
+				split[i + 1] = prog.Count;
+				// save 0
 				save = new int[2];
 				save[0] = Save;
 				save[1] = 0;
 				prog.Add(save);
+				// expr
 				EmitPart(expressions[i], prog);
+				// save 1
 				save = new int[2];
 				save[0] = Save;
 				save[1] = 1;
 				prog.Add(save);
+				// match <i>
 				match = new int[2];
 				match[0] = Match;
 				match[1] = i;
 				prog.Add(match);
 			}
-			
-			sp[sp.Length - 1] = prog.Count;
+			// generate the error condition
+			// handling
+			split[split.Length - 1] = prog.Count;
+			// save 0
 			save = new int[2];
 			save[0] = Save;
 			save[1] = 0;
 			prog.Add(save);
+			// any
 			var any = new int[1];
 			any[0] = Any;
 			prog.Add(any);
+			// save 1
 			save = new int[2];
 			save[0] =Save;
 			save[1] = 1;
 			prog.Add(save);
+			// match -1
 			match = new int[2];
 			match[0] = Match;
 			match[1] = -1;

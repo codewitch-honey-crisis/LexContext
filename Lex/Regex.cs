@@ -135,6 +135,7 @@ namespace L
 						if (char.IsHighSurrogate(ch1))
 						{
 							input.Advance();
+							++sp;
 							ch2 = unchecked((char)input.Current);
 							cur = char.ConvertToUtf32(ch1, ch2);
 						}
