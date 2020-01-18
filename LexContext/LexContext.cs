@@ -396,7 +396,12 @@ namespace LC
 					_column += TabWidth;
 					break;
 				default:
-					++_column;
+					// since we have to advance to read the second surrogate
+					// we don't increment the column on the first surrogate
+					// and surrogate pairs should only change the column
+					// by one anyway
+					if(!char.IsHighSurrogate(unchecked((char)_current)))
+						++_column;
 					break;
 			}
 			++_position;
