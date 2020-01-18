@@ -36,11 +36,11 @@ namespace L
 			List<_Fiber> clist, nlist, tmp;
 			int[] pc;
 			int sp=0;
-			var sb = new StringBuilder();
+			var sb = new StringBuilder(64);
 			IList<int> saved, matched;
 			var maxfibers = 0;
 			matched = null;
-			saved = new List<int>();
+			saved = new List<int>(2);
 			clist = new List<_Fiber>(prog.Length);
 			nlist = new List<_Fiber>(prog.Length);
 			_EnqueueFiber(clist, new _Fiber(prog,0, saved), 0);
