@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,6 +12,7 @@ namespace LexDemo
 	{
 		static void Main(string[] args)
 		{
+
 			// compile a lexer
 			var prog = Regex.CompileLexer(
 				@"[A-Z_a-z][A-Z_a-z0-9]*", // id
@@ -22,7 +24,7 @@ namespace LexDemo
 			Console.WriteLine(Regex.ProgramToString(prog));
 			
 			// our test data
-			var text = "fubar bar 123 1foo bar -243 @ 0";
+			var text = "fubar bar 123 1foo bar -243 @#*! 0";
 			Console.WriteLine("Lex: " + text);
 
 			// spin up a lexer context
@@ -37,6 +39,20 @@ namespace LexDemo
 				// lex our next input and dump it
 				Console.WriteLine("{0}: \"{1}\"", Regex.Lex(prog, lc), lc.GetCapture());
 			}
+			var sw = new Stopwatch();
+			const int ITER = 1000;
+			for(var i = 0;i<ITER;++i)
+			{
+				lc = LexContext.Create(text);
+				while (LexContext.EndOfInput != lc.Current)
+				{
+					lc.ClearCapture();
+					sw.Start();
+					var acc = Regex.Lex(prog, lc);
+					sw.Stop();
+				}
+			}
+			Console.WriteLine("Lexed in " + sw.ElapsedMilliseconds / (float)ITER + " msec");
 		}
 	}
 }

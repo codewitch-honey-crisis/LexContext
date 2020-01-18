@@ -1,5 +1,4 @@
 ﻿using LC;
-using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -39,12 +38,13 @@ namespace L
 			int sp=0;
 			var sb = new StringBuilder();
 			IList<int> saved, matched;
-
+			var maxfibers = 0;
 			matched = null;
 			saved = new List<int>();
 			clist = new List<_Fiber>(prog.Length);
 			nlist = new List<_Fiber>(prog.Length);
 			_EnqueueFiber(clist, new _Fiber(prog,0, saved), 0);
+			maxfibers = clist.Count;
 			matched = null;
 			var cur = -1;
 			if(LexContext.EndOfInput!=input.Current)
@@ -112,6 +112,7 @@ namespace L
 							}
 							passed = true;
 							_EnqueueFiber(nlist, new _Fiber(t, t.Index+1, saved), sp+1);
+
 							break;
 						case Compiler.Match:
 							matched = saved;
@@ -145,12 +146,17 @@ namespace L
 					}
 					++sp;
 				}
+				if (clist.Count > maxfibers)
+					maxfibers = clist.Count;
+				if (nlist.Count > maxfibers)
+					maxfibers = nlist.Count; // sanity
 				tmp = clist;
 				clist = nlist;
 				nlist = tmp;
 				nlist.Clear();
 				
 			}
+
 			if (null!=matched)
 			{
 				var start = matched[0];
@@ -194,7 +200,7 @@ namespace L
 						_EnqueueFiber(l, new _Fiber(t.Program, t.Instruction[j],t.Saved),sp);
 					break;
 				case Compiler.Save:
-					var saved = new List<int>(t.Saved.Count);
+					var saved = new List<int>(t.Saved.Count+1);
 					for (int ic = t.Saved.Count, i = 0; i < ic; ++i)
 						saved.Add(t.Saved[i]);
 					var slot = t.Instruction[1];
@@ -224,6 +230,5 @@ namespace L
 			}
 			public int[] Instruction { get { return Program[Index]; } }
 		}
-		
 	}
 }
