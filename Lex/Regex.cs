@@ -46,6 +46,22 @@ namespace L
 			nlist = new List<_Fiber>(prog.Length);
 			_EnqueueFiber(clist, new _Fiber(prog,0, saved), 0);
 			matched = null;
+			var cur = -1;
+			if(LexContext.EndOfInput!=input.Current)
+			{
+				var ch1 = unchecked((char)input.Current);
+				var ch2 = '\0';
+				if (char.IsHighSurrogate(ch1))
+				{
+					input.Advance();
+					ch2 = unchecked((char)input.Current);
+					cur = char.ConvertToUtf32(ch1, ch2);
+				}
+				else
+					cur = (int)ch1;
+				
+			}
+			
 			while(0<clist.Count)
 			{
 				bool passed = false;
@@ -57,31 +73,33 @@ namespace L
 					switch (pc[0])
 					{
 						case Compiler.Char:
-							if (input.Current != pc[1])
+							if (cur!= pc[1])
 							{
 								break;
 							}
 							goto case Compiler.Any;
 						case Compiler.Set:
-							if (!_InRanges(pc, input.Current))
+							if (!_InRanges(pc, cur))
 							{
 								break;
 							}
 							goto case Compiler.Any;
 						case Compiler.NSet:
-							if (_InRanges(pc, input.Current))
+							if (_InRanges(pc, cur))
 							{
 								break;
 							}
 							goto case Compiler.Any;
 						case Compiler.UCode:
-							if (unchecked((int)char.GetUnicodeCategory(unchecked((char)input.Current))) != pc[1])
+							var str = char.ConvertFromUtf32(cur);
+							if (unchecked((int)char.GetUnicodeCategory(str,0) != pc[1]))
 							{
 								break;
 							}
 							goto case Compiler.Any;
 						case Compiler.NUCode:
-							if (unchecked((int)char.GetUnicodeCategory(unchecked((char)input.Current))) == pc[1])
+							str = char.ConvertFromUtf32(cur);
+							if (unchecked((int)char.GetUnicodeCategory(str,0)) == pc[1])
 							{
 								break;
 							}
@@ -108,8 +126,23 @@ namespace L
 				}
 				if (passed)
 				{
-					sb.Append(unchecked((char)input.Current));
+					var s = char.ConvertFromUtf32(cur);
+					sb.Append(s);
 					input.Advance();
+					if (LexContext.EndOfInput != input.Current)
+					{
+						var ch1 = unchecked((char)input.Current);
+						var ch2 = '\0';
+						if (char.IsHighSurrogate(ch1))
+						{
+							input.Advance();
+							ch2 = unchecked((char)input.Current);
+							cur = char.ConvertToUtf32(ch1, ch2);
+						}
+						else
+							cur = (int)ch1;
+						
+					}
 				}
 				tmp = clist;
 				clist = nlist;

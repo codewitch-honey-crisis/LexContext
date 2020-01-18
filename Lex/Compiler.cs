@@ -394,7 +394,6 @@ namespace L
 			var sp = new int[expressions.Length + 1];
 			sp[0] = Compiler.Split;
 			prog.Add(sp);
-			var slot = 0;
 			for (var i = 0; i < expressions.Length; i++)
 			{
 				sp[i + 1] = prog.Count;

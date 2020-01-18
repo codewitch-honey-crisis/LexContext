@@ -19,25 +19,27 @@ namespace LexTableGen
 				var td = CU.Class("CharCls");
 				ns.Types.Add(td);
 				td.IsPartial = true;
-				var uc = new List<char>[30];
-				var isLetter = new List<char>();
-				var isLetterOrDigit = new List<char>();
-				var isDigit = new List<char>();
-				var isWhiteSpace = new List<char>();
+				var uc = new List<int>[30];
+				var isLetter = new List<int>();
+				var isLetterOrDigit = new List<int>();
+				var isDigit = new List<int>();
+				var isWhiteSpace = new List<int>();
 				for (var i = 0; i < uc.Length; i++)
-					uc[i] = new List<char>();
-				for (var i = 0; i < 65536; i++)
+					uc[i] = new List<int>();
+				for (var i = 0; i < 0x110000; i++)
 				{
-					var ch = (char)i;
-					uc[(int)char.GetUnicodeCategory(ch)].Add(ch);
-					if (char.IsLetter(ch))
-						isLetter.Add(ch);
-					if (char.IsDigit(ch))
-						isDigit.Add(ch);
-					if (char.IsLetterOrDigit(ch))
-						isLetterOrDigit.Add(ch);
-					if (char.IsWhiteSpace(ch))
-						isWhiteSpace.Add(ch);
+					if (i >= 0x00d800 && i <= 0x00dfff)
+						continue;
+					var ch = char.ConvertFromUtf32(i);
+					uc[(int)char.GetUnicodeCategory(ch,0)].Add(i);
+					if (char.IsLetter(ch,0))
+						isLetter.Add(i);
+					if (char.IsDigit(ch,0))
+						isDigit.Add(i);
+					if (char.IsLetterOrDigit(ch,0))
+						isLetterOrDigit.Add(i);
+					if (char.IsWhiteSpace(ch,0))
+						isWhiteSpace.Add(i);
 						
 				}
 				var uca = new int[30][];
@@ -51,12 +53,12 @@ namespace LexTableGen
 				sw.Write(CU.ToString(ccu));	
 			}
 		}
-		static int[] _GetRanges(IEnumerable<char> chars)
+		static int[] _GetRanges(IEnumerable<int> chars)
 		{
 			var result = new List<int>();
-			char first = '\0';
-			char last = '\0';
-			using (IEnumerator<char> e = chars.GetEnumerator())
+			int first = '\0';
+			int last = '\0';
+			using (IEnumerator<int> e = chars.GetEnumerator())
 			{
 				bool moved = e.MoveNext();
 				while (moved)
