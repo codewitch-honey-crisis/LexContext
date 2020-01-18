@@ -38,22 +38,22 @@ namespace L
 			int[] pc;
 			int sp=0;
 			var sb = new StringBuilder();
-			_Sub sub, matched;
+			IList<int> saved, matched;
 
 			matched = null;
-			sub = new _Sub();
+			saved = new List<int>();
 			clist = new List<_Fiber>(prog.Length);
 			nlist = new List<_Fiber>(prog.Length);
-			_AddThread(clist, new _Fiber(prog,0, sub), 0);
+			_AddThread(clist, new _Fiber(prog,0, saved), 0);
 			matched = null;
 			while(0<clist.Count)
 			{
-				bool ok = false;
+				bool passed = false;
 				for (i = 0; i < clist.Count; ++i)
 				{
 					var t = clist[i];
 					pc = t.Instruction;
-					sub = t.Sub;
+					saved = t.Saved;
 					switch (pc[0])
 					{
 						case Compiler.Char:
@@ -92,12 +92,12 @@ namespace L
 							{
 								break;
 							}
-							ok = true;
-							_AddThread(nlist, new _Fiber(t, t.Index+1, sub), sp+1);
+							passed = true;
+							_AddThread(nlist, new _Fiber(t, t.Index+1, saved), sp+1);
 							++sp;
 							break;
 						case Compiler.Match:
-							matched = sub;
+							matched = saved;
 							match = pc[1];
 							
 							// break the for loop:
@@ -106,7 +106,7 @@ namespace L
 							
 					}
 				}
-				if (ok)
+				if (passed)
 				{
 					sb.Append(unchecked((char)input.Current));
 					input.Advance();
@@ -119,23 +119,15 @@ namespace L
 			}
 			if (null!=matched)
 			{
-				var start = matched.Indices[0];
-				var end = matched.Indices[1];
+				var start = matched[0];
+				var end = matched[1];
 				input.CaptureBuffer.Append(sb.ToString(start, end - start));
-				//for (i = 0; i < nsubp; i++)
-				//	subp[i] = matched->sub[i];
-				//decref(matched);
-				System.Diagnostics.Debug.WriteLine("Read: " + sb.ToString());
 				return match;
 			}
 			System.Diagnostics.Debug.WriteLine("Read: " + sb.ToString());
 			return -1;
 		}
-		private sealed class _Sub
-		{
-			public List<int> Indices = new List<int>();
-		}
-
+		
 		static bool _InRanges(int[] pc,int ch)
 		{
 			var found = false;
@@ -162,21 +154,21 @@ namespace L
 			switch (t.Instruction[0])
 			{
 				case Compiler.Jmp:
-					_AddThread(l, new _Fiber(t, t.Instruction[1],t.Sub),sp);
+					_AddThread(l, new _Fiber(t, t.Instruction[1],t.Saved),sp);
 					break;
 				case Compiler.Split:
 					for (var j = 1; j < t.Instruction.Length; j++)
-						_AddThread(l, new _Fiber(t.Program, t.Instruction[j],t.Sub),sp);
+						_AddThread(l, new _Fiber(t.Program, t.Instruction[j],t.Saved),sp);
 					break;
 				case Compiler.Save:
-					var sub = new _Sub();
-					for (int ic = t.Sub.Indices.Count, i = 0; i < ic; ++i)
-						sub.Indices.Add(t.Sub.Indices[i]);
+					var saved = new List<int>(t.Saved.Count);
+					for (int ic = t.Saved.Count, i = 0; i < ic; ++i)
+						saved.Add(t.Saved[i]);
 					var slot = t.Instruction[1];
-					while (sub.Indices.Count < (slot + 1))
-						sub.Indices.Add(0);
-					sub.Indices[slot] = sp;
-					_AddThread(l, new _Fiber(t,t.Index+1, sub), sp);
+					while (saved.Count < (slot + 1))
+						saved.Add(0);
+					saved[slot] = sp;
+					_AddThread(l, new _Fiber(t,t.Index+1, saved), sp);
 					break;
 				/*default:
 					l.Add(t);
@@ -187,18 +179,18 @@ namespace L
 		{
 			public readonly int[][] Program;
 			public readonly int Index;
-			public _Sub Sub;
-			public _Fiber(int[][] program, int index,_Sub sub)
+			public IList<int> Saved;
+			public _Fiber(int[][] program, int index,IList<int> saved)
 			{
 				Program = program;
 				Index = index;
-				Sub = sub;
+				Saved = saved;
 			}
-			public _Fiber(_Fiber fiber, int index,_Sub sub)
+			public _Fiber(_Fiber fiber, int index,IList<int> saved)
 			{
 				Program = fiber.Program;
 				Index = index;
-				Sub = sub;
+				Saved = saved;
 			}
 			public int[] Instruction { get { return Program[Index]; } }
 		}
