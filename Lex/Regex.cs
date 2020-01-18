@@ -33,7 +33,7 @@ namespace L
 		public static int Lex(int[][] prog,LexContext input)
 		{
 			input.EnsureStarted();
-			int i,match=-1;
+			int i,match=-2;
 			List<_Fiber> clist, nlist, tmp;
 			int[] pc;
 			int sp=0;
@@ -73,7 +73,7 @@ namespace L
 					switch (pc[0])
 					{
 						case Compiler.Char:
-							if (cur!= pc[1])
+							if (pc.Length!=0 && cur!= pc[1])
 							{
 								break;
 							}
@@ -112,7 +112,6 @@ namespace L
 							}
 							passed = true;
 							_EnqueueFiber(nlist, new _Fiber(t, t.Index+1, saved), sp+1);
-							++sp;
 							break;
 						case Compiler.Match:
 							matched = saved;
@@ -143,6 +142,7 @@ namespace L
 							cur = (int)ch1;
 						
 					}
+					++sp;
 				}
 				tmp = clist;
 				clist = nlist;

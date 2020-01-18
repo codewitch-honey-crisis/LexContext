@@ -350,7 +350,9 @@ namespace L
 				case Jmp:
 					return "jmp " + _FmtLbl(inst[1]);
 				case Char:
-					return "char " + _ToStr((char)inst[1]);
+					if (2==inst.Length)// for testing
+						return "char " + _ToStr((char)inst[1]);
+					else return "char";
 				case UCode:
 				case NUCode:
 					return (UCode == inst[0] ? "ucode " : "nucode ") + inst[1];
@@ -391,7 +393,7 @@ namespace L
 		{
 			var prog = new List<int[]>();
 			int[] match, save;
-			var sp = new int[expressions.Length + 1];
+			var sp = new int[expressions.Length + 2];
 			sp[0] = Compiler.Split;
 			prog.Add(sp);
 			for (var i = 0; i < expressions.Length; i++)
@@ -411,6 +413,24 @@ namespace L
 				match[1] = i;
 				prog.Add(match);
 			}
+			
+			sp[sp.Length - 1] = prog.Count;
+			save = new int[2];
+			save[0] = Save;
+			save[1] = 0;
+			prog.Add(save);
+			var any = new int[1];
+			any[0] = Any;
+			prog.Add(any);
+			save = new int[2];
+			save[0] =Save;
+			save[1] = 1;
+			prog.Add(save);
+			match = new int[2];
+			match[0] = Match;
+			match[1] = -1;
+			prog.Add(match);
+			
 			return prog.ToArray();
 		}
 		
