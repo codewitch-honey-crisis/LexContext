@@ -44,7 +44,7 @@ namespace L
 			saved = new List<int>();
 			clist = new List<_Fiber>(prog.Length);
 			nlist = new List<_Fiber>(prog.Length);
-			_AddThread(clist, new _Fiber(prog,0, saved), 0);
+			_EnqueueFiber(clist, new _Fiber(prog,0, saved), 0);
 			matched = null;
 			while(0<clist.Count)
 			{
@@ -93,7 +93,7 @@ namespace L
 								break;
 							}
 							passed = true;
-							_AddThread(nlist, new _Fiber(t, t.Index+1, saved), sp+1);
+							_EnqueueFiber(nlist, new _Fiber(t, t.Index+1, saved), sp+1);
 							++sp;
 							break;
 						case Compiler.Match:
@@ -123,8 +123,7 @@ namespace L
 				var end = matched[1];
 				input.CaptureBuffer.Append(sb.ToString(start, end - start));
 				return match;
-			}
-			System.Diagnostics.Debug.WriteLine("Read: " + sb.ToString());
+			};
 			return -1;
 		}
 		
@@ -148,17 +147,17 @@ namespace L
 			}
 			return found;
 		}
-		static void _AddThread(IList<_Fiber> l, _Fiber t, int sp)
+		static void _EnqueueFiber(IList<_Fiber> l, _Fiber t, int sp)
 		{
 			l.Add(t);
 			switch (t.Instruction[0])
 			{
 				case Compiler.Jmp:
-					_AddThread(l, new _Fiber(t, t.Instruction[1],t.Saved),sp);
+					_EnqueueFiber(l, new _Fiber(t, t.Instruction[1],t.Saved),sp);
 					break;
 				case Compiler.Split:
 					for (var j = 1; j < t.Instruction.Length; j++)
-						_AddThread(l, new _Fiber(t.Program, t.Instruction[j],t.Saved),sp);
+						_EnqueueFiber(l, new _Fiber(t.Program, t.Instruction[j],t.Saved),sp);
 					break;
 				case Compiler.Save:
 					var saved = new List<int>(t.Saved.Count);
@@ -168,11 +167,8 @@ namespace L
 					while (saved.Count < (slot + 1))
 						saved.Add(0);
 					saved[slot] = sp;
-					_AddThread(l, new _Fiber(t,t.Index+1, saved), sp);
+					_EnqueueFiber(l, new _Fiber(t,t.Index+1, saved), sp);
 					break;
-				/*default:
-					l.Add(t);
-					break;*/
 			}
 		}
 		private struct _Fiber
