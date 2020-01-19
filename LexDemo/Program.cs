@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,18 +11,22 @@ namespace LexDemo
 {
 	class Program
 	{
-		static void Main(string[] args)
+		static void Main()
+		{
+			Console.WriteLine(Lex.Disassemble(Lex.AssembleFrom(@"..\..\lexer.lasm")));
+		}
+		static void _RunLexer()
 		{
 
 			// compile a lexer
-			var prog = Regex.CompileLexer(
+			var prog = Lex.CompileLexerRegex(
 				@"[A-Z_a-z][A-Z_a-z0-9]*", // id
 				@"0|(\-?[1-9][0-9]*)", // int
 				@"[ \t\r\n\v\f]" // space
 			);
 			
 			// dump the program to the console
-			Console.WriteLine(Regex.ProgramToString(prog));
+			Console.WriteLine(Lex.Disassemble(prog));
 			
 			// our test data
 			var text = "fubar bar 123 1foo bar -243 @#*! 0";
@@ -37,7 +42,7 @@ namespace LexDemo
 				// clear any current captured data
 				lc.ClearCapture();
 				// lex our next input and dump it
-				Console.WriteLine("{0}: \"{1}\"", Regex.Lex(prog, lc), lc.GetCapture());
+				Console.WriteLine("{0}: \"{1}\"", Lex.Run(prog, lc), lc.GetCapture());
 			}
 			var sw = new Stopwatch();
 			const int ITER = 1000;
@@ -48,7 +53,7 @@ namespace LexDemo
 				{
 					lc.ClearCapture();
 					sw.Start();
-					var acc = Regex.Lex(prog, lc);
+					var acc = Lex.Run(prog, lc);
 					sw.Stop();
 				}
 			}

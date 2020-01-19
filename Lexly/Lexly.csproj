@@ -4,10 +4,10 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{A8C52CD4-EE5E-4559-BA4C-3B9A77CEBF89}</ProjectGuid>
+    <ProjectGuid>{4B30D333-1DB5-4035-8996-E233AAA23C0D}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>LexDemo</RootNamespace>
-    <AssemblyName>LexDemo</AssemblyName>
+    <RootNamespace>Lexly</RootNamespace>
+    <AssemblyName>Lexly</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -36,23 +36,21 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Deslanged.Export.cs" />
+    <Compile Include="Export\Token.cs" />
+    <Compile Include="Export\Tokenizer.cs" />
+    <Compile Include="Lex.brick.cs" />
+    <Compile Include="LexContext.brick.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <Content Include="identifier.lasm" />
-    <Content Include="lexer.lasm" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\LexContext\LexContext.csproj">
-      <Project>{240ac77d-3deb-4415-842b-8c0226d42593}</Project>
-      <Name>LexContext</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Lex\Lex.csproj">
-      <Project>{4faf16f7-0493-4429-9ea1-ba4a8ae86085}</Project>
-      <Name>Lex</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PreBuildEvent>csbrick.exe "$(SolutionDir)LexContext\LexContext.csproj" /output "$(ProjectDir)LexContext.brick.cs"
+csbrick.exe "$(SolutionDir)Lex\Lex.csproj" /output "$(ProjectDir)Lex.brick.cs"
+deslang.exe "$(ProjectDir)Export\Token.cs" "$(ProjectDir)Export\Tokenizer.cs" /output "$(ProjectDir)Deslanged.Export.cs" /ifstale</PreBuildEvent>
+  </PropertyGroup>
 </Project>

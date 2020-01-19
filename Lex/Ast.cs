@@ -478,7 +478,7 @@ namespace L
 			}
 			return result.ToArray();
 		}
-
+		
 		static void _ParseCharClassEscape(LexContext pc, string cls, List<int> result, ref int[] next, ref bool readDash)
 		{
 			if (null != next)

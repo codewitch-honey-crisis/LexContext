@@ -117,7 +117,7 @@ namespace L
 					// (n)set packedRange1Left, packedRange1Right, packedRange2Left, packedRange2Right...
 					inst = new int[ast.Ranges.Length + 1];
 					inst[0] = (ast.Kind==Ast.Set)?Set:NSet;
-					Array.Sort(ast.Ranges);
+					SortRanges(ast.Ranges);
 					Array.Copy(ast.Ranges, 0, inst, 1, ast.Ranges.Length);
 					prog.Add(inst);
 					break;
@@ -481,6 +481,23 @@ namespace L
 			
 			return prog.ToArray();
 		}
-		
+		internal static void SortRanges(int[] ranges)
+		{
+			var result = new List<KeyValuePair<int, int>>(ranges.Length / 2);
+			for (var i = 0; i < ranges.Length - 1; ++i)
+			{
+				var ch = ranges[i];
+				++i;
+				result.Add(new KeyValuePair<int, int>(ch, ranges[i]));
+			}
+			result.Sort((x, y) => { return x.Key.CompareTo(y.Key); });
+			for (int ic = result.Count, i = 0; i < ic; ++i)
+			{
+				var j = i * 2;
+				var kvp = result[i];
+				ranges[j] = kvp.Key;
+				ranges[j + 1] = kvp.Value;
+			}
+		}
 	}
 }
