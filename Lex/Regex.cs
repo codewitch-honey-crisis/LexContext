@@ -38,8 +38,8 @@ namespace L
 			int[] pc;
 			int sp=0;
 			var sb = new StringBuilder(64);
-			List<int> saved, matched;
-			saved = new List<int>(2);
+			int[] saved, matched;
+			saved = new int[2];
 			currentFibers = new _Fiber[prog.Length];
 			nextFibers = new _Fiber[prog.Length];
 			_EnqueueFiber(ref currentFiberCount, currentFibers, new _Fiber(prog,0, saved), 0);
@@ -199,12 +199,11 @@ namespace L
 						_EnqueueFiber(ref lcount,l, new _Fiber(t.Program, pc[j],t.Saved),sp);
 					break;
 				case Compiler.Save:
-					var saved = new List<int>(t.Saved.Count+1);
-					for (int ic = t.Saved.Count, i = 0; i < ic; ++i)
-						saved.Add(t.Saved[i]);
 					var slot = pc[1];
-					while (saved.Count < (slot + 1))
-						saved.Add(0);
+					var max = slot > t.Saved.Length ? slot : t.Saved.Length;
+					var saved = new int[max];
+					for (var i = 0;i<t.Saved.Length;++i)
+						saved[i]=t.Saved[i];
 					saved[slot] = sp;
 					_EnqueueFiber(ref lcount,l, new _Fiber(t,t.Index+1, saved), sp);
 					break;
@@ -214,14 +213,14 @@ namespace L
 		{
 			public readonly int[][] Program;
 			public readonly int Index;
-			public List<int> Saved;
-			public _Fiber(int[][] program, int index,List<int> saved)
+			public int[] Saved;
+			public _Fiber(int[][] program, int index,int[] saved)
 			{
 				Program = program;
 				Index = index;
 				Saved = saved;
 			}
-			public _Fiber(_Fiber fiber, int index,List<int> saved)
+			public _Fiber(_Fiber fiber, int index,int[] saved)
 			{
 				Program = fiber.Program;
 				Index = index;
