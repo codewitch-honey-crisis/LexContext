@@ -32,17 +32,17 @@ namespace L
 		public static int Lex(int[][] prog,LexContext input)
 		{
 			input.EnsureStarted();
-			int i,match=-2;
-			List<_Fiber> clist, nlist, tmp;
+			int i,match=-1;
+			_Fiber[] currentFibers, nextFibers, tmp;
+			int currentFiberCount=0, nextFiberCount=0;
 			int[] pc;
 			int sp=0;
 			var sb = new StringBuilder(64);
-			IList<int> saved, matched;
-			matched = null;
+			List<int> saved, matched;
 			saved = new List<int>(2);
-			clist = new List<_Fiber>(prog.Length);
-			nlist = new List<_Fiber>(prog.Length);
-			_EnqueueFiber(clist, new _Fiber(prog,0, saved), 0);
+			currentFibers = new _Fiber[prog.Length];
+			nextFibers = new _Fiber[prog.Length];
+			_EnqueueFiber(ref currentFiberCount, currentFibers, new _Fiber(prog,0, saved), 0);
 			matched = null;
 			var cur = -1;
 			if(LexContext.EndOfInput!=input.Current)
@@ -60,18 +60,18 @@ namespace L
 				
 			}
 			
-			while(0<clist.Count)
+			while(0<currentFiberCount)
 			{
 				bool passed = false;
-				for (i = 0; i < clist.Count; ++i)
+				for (i = 0; i < currentFiberCount; ++i)
 				{
-					var t = clist[i];
-					pc = t.Instruction;
+					var t = currentFibers[i];
+					pc = t.Program[t.Index];
 					saved = t.Saved;
 					switch (pc[0])
 					{
 						case Compiler.Char:
-							if (pc.Length!=0 && cur!= pc[1])
+							if (cur!= pc[1])
 							{
 								break;
 							}
@@ -109,7 +109,7 @@ namespace L
 								break;
 							}
 							passed = true;
-							_EnqueueFiber(nlist, new _Fiber(t, t.Index+1, saved), sp+1);
+							_EnqueueFiber(ref nextFiberCount, nextFibers, new _Fiber(t, t.Index+1, saved), sp+1);
 
 							break;
 						case Compiler.Match:
@@ -117,7 +117,7 @@ namespace L
 							match = pc[1];
 							
 							// break the for loop:
-							i = clist.Count;
+							i = currentFiberCount;
 							break;
 							
 					}
@@ -144,21 +144,24 @@ namespace L
 					}
 					++sp;
 				}
-				tmp = clist;
-				clist = nlist;
-				nlist = tmp;
-				nlist.Clear();
+				tmp = currentFibers;
+				currentFibers = nextFibers;
+				nextFibers = tmp;
+				currentFiberCount = nextFiberCount;
+				nextFiberCount = 0;
 				
 			}
 
 			if (null!=matched)
 			{
 				var start = matched[0];
-				var end = matched[1];
-				input.CaptureBuffer.Append(sb.ToString(start, end - start));
+				// this is actually the point just past the end
+				// of the match, but we can treat it as the length
+				var len = matched[1];
+				input.CaptureBuffer.Append(sb.ToString(start, len - start));
 				return match;
 			};
-			return -1;
+			return -1; // error symbol
 		}
 		
 		static bool _InRanges(int[] pc,int ch)
@@ -181,27 +184,29 @@ namespace L
 			}
 			return found;
 		}
-		static void _EnqueueFiber(IList<_Fiber> l, _Fiber t, int sp)
+		static void _EnqueueFiber(ref int lcount,_Fiber[] l, _Fiber t, int sp)
 		{
-			l.Add(t);
-			switch (t.Instruction[0])
+			l[lcount] = t;
+			++lcount;
+			var pc = t.Program[t.Index];
+			switch (pc[0])
 			{
 				case Compiler.Jmp:
-					_EnqueueFiber(l, new _Fiber(t, t.Instruction[1],t.Saved),sp);
+					_EnqueueFiber(ref lcount,l, new _Fiber(t, pc[1],t.Saved),sp);
 					break;
 				case Compiler.Split:
-					for (var j = 1; j < t.Instruction.Length; j++)
-						_EnqueueFiber(l, new _Fiber(t.Program, t.Instruction[j],t.Saved),sp);
+					for (var j = 1; j < pc.Length; j++)
+						_EnqueueFiber(ref lcount,l, new _Fiber(t.Program, pc[j],t.Saved),sp);
 					break;
 				case Compiler.Save:
 					var saved = new List<int>(t.Saved.Count+1);
 					for (int ic = t.Saved.Count, i = 0; i < ic; ++i)
 						saved.Add(t.Saved[i]);
-					var slot = t.Instruction[1];
+					var slot = pc[1];
 					while (saved.Count < (slot + 1))
 						saved.Add(0);
 					saved[slot] = sp;
-					_EnqueueFiber(l, new _Fiber(t,t.Index+1, saved), sp);
+					_EnqueueFiber(ref lcount,l, new _Fiber(t,t.Index+1, saved), sp);
 					break;
 			}
 		}
@@ -209,20 +214,19 @@ namespace L
 		{
 			public readonly int[][] Program;
 			public readonly int Index;
-			public IList<int> Saved;
-			public _Fiber(int[][] program, int index,IList<int> saved)
+			public List<int> Saved;
+			public _Fiber(int[][] program, int index,List<int> saved)
 			{
 				Program = program;
 				Index = index;
 				Saved = saved;
 			}
-			public _Fiber(_Fiber fiber, int index,IList<int> saved)
+			public _Fiber(_Fiber fiber, int index,List<int> saved)
 			{
 				Program = fiber.Program;
 				Index = index;
 				Saved = saved;
 			}
-			public int[] Instruction { get { return Program[Index]; } }
 		}
 	}
 }
