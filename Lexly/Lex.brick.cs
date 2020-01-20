@@ -101,26 +101,26 @@ Ast.Cat;cat.Left=result;cat.Right=next;result=cat;}break;case'|':if(-1!=pc.Advan
 =new Ast();set.Kind=Set;set.Ranges=new int[]{result.Value,result.Value,next.Value,next.Value};result=set;}else if(Ast.Lit==result.Kind&&Ast.Set==next.Kind)
 {var set=new Ast();set.Kind=Ast.Set;set.Ranges=new int[next.Ranges.Length+2];set.Ranges[0]=result.Value;set.Ranges[1]=result.Value;Array.Copy(next.Ranges,
 0,set.Ranges,2,next.Ranges.Length);result=set;}else{var alt=new Ast();alt.Kind=Ast.Alt;alt.Left=result;alt.Right=next;result=alt;}}else{var opt=new Ast();
-opt.Kind=Ast.Opt;opt.Left=result;result=opt;}break;case'[':var seti=_ParseSet(pc); next=new Ast();next.Kind=(seti.Key)?NSet:Set;next.Ranges=seti.Value;
+opt.Kind=Ast.Opt;opt.Left=result;result=opt;}break;case'[':var seti=_ParseSet(pc);next=new Ast();next.Kind=(seti.Key)?NSet:Set;next.Ranges=seti.Value;
 next=_ParseModifier(next,pc);if(null==result)result=next;else{var cat=new Ast();cat.Kind=Ast.Cat;cat.Left=result;cat.Right=next;result=cat;}break;default:
 ich=pc.Current;next=new Ast();next.Kind=Ast.Lit;next.Value=ich;pc.Advance();next=_ParseModifier(next,pc);if(null==result)result=next;else{var cat=new Ast();
-cat.Kind=Ast.Cat;cat.Left=result;cat.Right=next;result=cat;}break;}}}static KeyValuePair<bool,int[]>_ParseSet(LexContext pc){if(102==pc.Line)System.Diagnostics.Debugger.Break();
-var result=new List<int>();pc.EnsureStarted();pc.Expecting('[');pc.Advance();pc.Expecting();var isNot=false;if('^'==pc.Current){isNot=true;pc.Advance();
-pc.Expecting();}var firstRead=true;int firstChar='\0';var readFirstChar=false;var wantRange=false;while(-1!=pc.Current&&(firstRead||']'!=pc.Current)){
-if(!wantRange){ if('['==pc.Current){pc.Advance();pc.Expecting();if(':'!=pc.Current){firstChar='[';readFirstChar=true;}else{pc.Advance();pc.Expecting();
-var ll=pc.CaptureBuffer.Length;if(!pc.TryReadUntil(':',false))throw new ExpectingException("Expecting character class",pc.Line,pc.Column,pc.Position,pc.FileOrUrl);
-pc.Expecting(':');pc.Advance();pc.Expecting(']');pc.Advance();var cls=pc.GetCapture(ll);result.AddRange(Lex.GetCharacterClass(cls));readFirstChar=false;
-wantRange=false;continue;}}if(!readFirstChar){if(char.IsHighSurrogate((char)pc.Current)){var chh=(char)pc.Current;pc.Advance();pc.Expecting();firstChar
-=char.ConvertToUtf32(chh,(char)pc.Current);pc.Advance();pc.Expecting();}else if('\\'==pc.Current){pc.Advance();firstChar=_ParseRangeEscapePart(pc);}else
-{firstChar=pc.Current;pc.Advance();pc.Expecting();}readFirstChar=true;}else{if('-'==pc.Current){pc.Advance();pc.Expecting();wantRange=true;}else{result.Add(firstChar);
-result.Add(firstChar);readFirstChar=false;}}firstRead=false;}else{if('\\'!=pc.Current){var ch=0;if(char.IsHighSurrogate((char)pc.Current)){var chh=(char)pc.Current;
-pc.Advance();pc.Expecting();ch=char.ConvertToUtf32(chh,(char)pc.Current);}else ch=(char)pc.Current;pc.Advance();pc.Expecting();result.Add(firstChar);result.Add(ch);
-}else{result.Add(firstChar);pc.Advance();result.Add(_ParseRangeEscapePart(pc));}wantRange=false;readFirstChar=false;}}if(readFirstChar){result.Add(firstChar);
-result.Add(firstChar);if(wantRange){result.Add('-');result.Add('-');}}pc.Expecting(']');pc.Advance();return new KeyValuePair<bool,int[]>(isNot,result.ToArray());
-}static int[]_ParseRanges(LexContext pc){pc.EnsureStarted();var result=new List<int>();int[]next=null;bool readDash=false;while(-1!=pc.Current&&']'!=pc.Current)
-{switch(pc.Current){case'[': if(null!=next){result.Add(next[0]);result.Add(next[1]);if(readDash){result.Add('-');result.Add('-');}}pc.Advance();pc.Expecting(':');
-pc.Advance();var l=pc.CaptureBuffer.Length;var lin=pc.Line;var col=pc.Column;var pos=pc.Position;pc.TryReadUntil(':',false);var n=pc.GetCapture(l);pc.Advance();
-pc.Expecting(']');pc.Advance();int[]rngs;if(!CharCls.CharacterClasses.TryGetValue(n,out rngs)){var sa=new string[CharCls.CharacterClasses.Count];CharCls.CharacterClasses.Keys.CopyTo(sa,
+cat.Kind=Ast.Cat;cat.Left=result;cat.Right=next;result=cat;}break;}}}static KeyValuePair<bool,int[]>_ParseSet(LexContext pc){var result=new List<int>();
+pc.EnsureStarted();pc.Expecting('[');pc.Advance();pc.Expecting();var isNot=false;if('^'==pc.Current){isNot=true;pc.Advance();pc.Expecting();}var firstRead
+=true;int firstChar='\0';var readFirstChar=false;var wantRange=false;while(-1!=pc.Current&&(firstRead||']'!=pc.Current)){if(!wantRange){ if('['==pc.Current)
+{pc.Advance();pc.Expecting();if(':'!=pc.Current){firstChar='[';readFirstChar=true;}else{pc.Advance();pc.Expecting();var ll=pc.CaptureBuffer.Length;if(!pc.TryReadUntil(':',
+false))throw new ExpectingException("Expecting character class",pc.Line,pc.Column,pc.Position,pc.FileOrUrl);pc.Expecting(':');pc.Advance();pc.Expecting(']');
+pc.Advance();var cls=pc.GetCapture(ll);result.AddRange(Lex.GetCharacterClass(cls));readFirstChar=false;wantRange=false;firstRead=false;continue;}}if(!readFirstChar)
+{if(char.IsHighSurrogate((char)pc.Current)){var chh=(char)pc.Current;pc.Advance();pc.Expecting();firstChar=char.ConvertToUtf32(chh,(char)pc.Current);pc.Advance();
+pc.Expecting();}else if('\\'==pc.Current){pc.Advance();firstChar=_ParseRangeEscapePart(pc);}else{firstChar=pc.Current;pc.Advance();pc.Expecting();}readFirstChar
+=true;}else{if('-'==pc.Current){pc.Advance();pc.Expecting();wantRange=true;}else{result.Add(firstChar);result.Add(firstChar);readFirstChar=false;}}firstRead
+=false;}else{if('\\'!=pc.Current){var ch=0;if(char.IsHighSurrogate((char)pc.Current)){var chh=(char)pc.Current;pc.Advance();pc.Expecting();ch=char.ConvertToUtf32(chh,
+(char)pc.Current);}else ch=(char)pc.Current;pc.Advance();pc.Expecting();result.Add(firstChar);result.Add(ch);}else{result.Add(firstChar);pc.Advance();
+result.Add(_ParseRangeEscapePart(pc));}wantRange=false;readFirstChar=false;}}if(readFirstChar){result.Add(firstChar);result.Add(firstChar);if(wantRange)
+{result.Add('-');result.Add('-');}}pc.Expecting(']');pc.Advance();return new KeyValuePair<bool,int[]>(isNot,result.ToArray());}static int[]_ParseRanges(LexContext
+ pc){pc.EnsureStarted();var result=new List<int>();int[]next=null;bool readDash=false;while(-1!=pc.Current&&']'!=pc.Current){switch(pc.Current){case'[':
+ if(null!=next){result.Add(next[0]);result.Add(next[1]);if(readDash){result.Add('-');result.Add('-');}}pc.Advance();pc.Expecting(':');pc.Advance();var
+ l=pc.CaptureBuffer.Length;var lin=pc.Line;var col=pc.Column;var pos=pc.Position;pc.TryReadUntil(':',false);var n=pc.GetCapture(l);pc.Advance();pc.Expecting(']');
+pc.Advance();int[]rngs;if(!CharCls.CharacterClasses.TryGetValue(n,out rngs)){var sa=new string[CharCls.CharacterClasses.Count];CharCls.CharacterClasses.Keys.CopyTo(sa,
 0);throw new ExpectingException("Invalid character class "+n,lin,col,pos,pc.FileOrUrl,sa);}result.AddRange(rngs);readDash=false;next=null;break;case'\\':
 pc.Advance();pc.Expecting();switch(pc.Current){case'h':_ParseCharClassEscape(pc,"space",result,ref next,ref readDash);break;case'd':_ParseCharClassEscape(pc,
 "digit",result,ref next,ref readDash);break;case'D':_ParseCharClassEscape(pc,"^digit",result,ref next,ref readDash);break;case'l':_ParseCharClassEscape(pc,

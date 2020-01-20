@@ -9,8 +9,13 @@ namespace LexDemo
 		static void Main()
 		{
 			var test = @"""([^""]|\\[\\'""abfnrtv0])*""";
+			test = @"(_|[[:IsLetterOrDigit:]])";
+			var cc = Lex.GetCharacterClass("IsLetterOrDigit");
+			var pi= Array.IndexOf(cc, '(');
+			Console.WriteLine("Has paren" + (-1 < pi));
 			Console.WriteLine("Test: " + test);
 			Console.WriteLine(Lex.Disassemble(Lex.CompileRegexPart(test)));
+			Console.WriteLine("Matches paren = "+Lex.IsMatch(Lex.CompileLexerRegex(test), LexContext.Create("(")));
 			//_RunLexer();
 		}
 		

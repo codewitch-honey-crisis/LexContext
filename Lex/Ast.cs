@@ -298,22 +298,7 @@ namespace L
 						break;
 					case '[':
 						var seti = _ParseSet(pc);
-						/*pc.ClearCapture();
-						pc.Advance();
-						pc.Expecting();
-						isNot = false;
-
-
-						if ('^' == pc.Current)
-						{
-							isNot = true;
-							pc.Advance();
-							pc.Expecting();
-						}
-						var ranges = _ParseRanges(pc);
-						pc.Expecting(']');
-						pc.Advance();
-						*/
+						
 						next = new Ast();
 						next.Kind = (seti.Key)?NSet:Set;
 						next.Ranges = seti.Value;
@@ -353,8 +338,6 @@ namespace L
 		}
 		static KeyValuePair<bool, int[]> _ParseSet(LexContext pc)
 		{
-			if (102 == pc.Line)
-				System.Diagnostics.Debugger.Break();
 			var result = new List<int>();
 			pc.EnsureStarted();
 			pc.Expecting('[');
@@ -402,6 +385,7 @@ namespace L
 							result.AddRange(Lex.GetCharacterClass(cls));
 							readFirstChar = false;
 							wantRange = false;
+							firstRead = false;
 							continue;
 						}
 					}
