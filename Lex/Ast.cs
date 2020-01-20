@@ -353,6 +353,8 @@ namespace L
 		}
 		static KeyValuePair<bool, int[]> _ParseSet(LexContext pc)
 		{
+			if (102 == pc.Line)
+				System.Diagnostics.Debugger.Break();
 			var result = new List<int>();
 			pc.EnsureStarted();
 			pc.Expecting('[');
@@ -398,7 +400,9 @@ namespace L
 							pc.Advance();
 							var cls = pc.GetCapture(ll);
 							result.AddRange(Lex.GetCharacterClass(cls));
-
+							readFirstChar = false;
+							wantRange = false;
+							continue;
 						}
 					}
 					if (!readFirstChar)
@@ -409,12 +413,22 @@ namespace L
 							pc.Advance();
 							pc.Expecting();
 							firstChar = char.ConvertToUtf32(chh, (char)pc.Current);
+							pc.Advance();
+							pc.Expecting();
+						}
+						else if ('\\' == pc.Current)
+						{
+							pc.Advance();
+							firstChar = _ParseRangeEscapePart(pc);
 						}
 						else
-							firstChar = (char)pc.Current;
+						{
+							firstChar = pc.Current;
+							pc.Advance();
+							pc.Expecting();
+						}
 						readFirstChar = true;
-						pc.Advance();
-						pc.Expecting();
+						
 					}
 					else
 					{
@@ -435,22 +449,28 @@ namespace L
 				}
 				else
 				{
-
-					var ch = 0;
-					if (char.IsHighSurrogate((char)pc.Current))
+					if ('\\' != pc.Current)
 					{
-						var chh = (char)pc.Current;
+						var ch = 0;
+						if (char.IsHighSurrogate((char)pc.Current))
+						{
+							var chh = (char)pc.Current;
+							pc.Advance();
+							pc.Expecting();
+							ch = char.ConvertToUtf32(chh, (char)pc.Current);
+						}
+						else
+							ch = (char)pc.Current;
 						pc.Advance();
 						pc.Expecting();
-						ch = char.ConvertToUtf32(chh, (char)pc.Current);
+						result.Add(firstChar);
+						result.Add(ch);
+					} else
+					{
+						result.Add(firstChar);
+						pc.Advance();
+						result.Add(_ParseRangeEscapePart(pc));
 					}
-					else
-						ch = (char)pc.Current;
-					pc.Advance();
-					pc.Expecting();
-					result.Add(firstChar);
-					result.Add(ch);
-
 					wantRange = false;
 					readFirstChar = false;
 				}
@@ -809,6 +829,11 @@ namespace L
 				default:
 					int i = pc.Current;
 					pc.Advance();
+					if(char.IsHighSurrogate((char)i))
+					{
+						i = char.ConvertToUtf32((char)i, (char)pc.Current);
+						pc.Advance();
+					}
 					return (char)i;
 			}
 		}
@@ -870,6 +895,11 @@ namespace L
 				default:
 					int i = pc.Current;
 					pc.Advance();
+					if (char.IsHighSurrogate((char)i))
+					{
+						i = char.ConvertToUtf32((char)i, (char)pc.Current);
+						pc.Advance();
+					}
 					return (char)i;
 			}
 		}

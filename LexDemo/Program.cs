@@ -8,8 +8,10 @@ namespace LexDemo
 	{
 		static void Main()
 		{
-			//Console.WriteLine(Lex.Disassemble(Lex.CompileRegexPart("[_[:IsLetter:]][_[:IsLetterOrDigit:]]*")));
-			_RunLexer();
+			var test = @"""([^""]|\\[\\'""abfnrtv0])*""";
+			Console.WriteLine("Test: " + test);
+			Console.WriteLine(Lex.Disassemble(Lex.CompileRegexPart(test)));
+			//_RunLexer();
 		}
 		
 		static void _RunLexer()

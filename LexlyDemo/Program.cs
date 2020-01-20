@@ -1,7 +1,9 @@
-﻿using System;
+﻿#region Usings
+using System;
 using System.Collections.Generic;
 using System.IO;
 using L;
+#endregion
 namespace LexlyDemo
 {
 	using ET = ExampleTokenizer;
