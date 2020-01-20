@@ -21,19 +21,32 @@ namespace LexTableGen
 				ns.Types.Add(td);
 				td.IsPartial = true;
 				var uc = new List<int>[30];
+				var nuc = new List<int>[30];
 				var isLetter = new List<int>();
 				var isLetterOrDigit = new List<int>();
 				var isDigit = new List<int>();
 				var isWhiteSpace = new List<int>();
 				var graph = new List<int>();
 				for (var i = 0; i < uc.Length; i++)
+				{
 					uc[i] = new List<int>();
+					nuc[i] = new List<int>();
+				}
 				for (var i = 0; i < 0x110000; i++)
 				{
 					if (i >= 0x00d800 && i <= 0x00dfff)
 						continue;
 					var ch = char.ConvertFromUtf32(i);
-					uc[(int)char.GetUnicodeCategory(ch,0)].Add(i);
+					var uci = (int)char.GetUnicodeCategory(ch, 0);
+					uc[uci].Add(i);
+					for(var j=0;j<uc.Length;++j)
+					{
+						if(j!=uci)
+						{
+							nuc[j].Add(i);
+						}
+					}
+
 					if (char.IsLetter(ch,0))
 						isLetter.Add(i);
 					if (char.IsDigit(ch,0))
@@ -48,41 +61,70 @@ namespace LexTableGen
 				var uca = new int[30][];
 				for(var i = 0;i<uca.Length;i++)
 					uca[i] = _GetRanges(uc[i]);
+				var nuca = new int[30][];
+				for (var i = 0; i < nuca.Length; i++)
+					nuca[i] = _GetRanges(nuc[i]);
 				var alnum = new List<int>();
 				alnum.AddRange(uc[(int)UnicodeCategory.LetterNumber]);
 				alnum.AddRange(isLetter);
 				alnum.AddRange(uc[(int)UnicodeCategory.DecimalDigitNumber]);
 				alnum.Sort();
+
+				var alpha = new List<int>();
+				alpha.AddRange(uc[(int)UnicodeCategory.LetterNumber]);
+				alpha.AddRange(isLetter);
+				alpha.Sort();
+
+				var blank = new List<int>();
+				blank.AddRange(uc[(int)UnicodeCategory.SpaceSeparator]);
+				blank.Add('\t');
+				blank.Sort();
 				
 				var asciiRanges = new int[] { 0, 0x7F };
 
-				
-				/*
-				 * [:alnum:]	Alphanumeric characters	[a-zA-Z0-9]	[\p{L}\p{Nl}
- \p{Nd}]		\p{Alnum}
-[:alpha:]	Alphabetic characters	[a-zA-Z]	\p{L}\p{Nl}		\p{Alpha}
-[:ascii:]	ASCII characters	[\x00-\x7F]	\p{InBasicLatin}		\p{ASCII}
-[:blank:]	Space and tab	[ \t]	[\p{Zs}\t]	\h	\p{Blank}
-[:cntrl:]	Control characters	[\x00-\x1F\x7F]	\p{Cc}		\p{Cntrl}
-[:digit:]	Digits	[0-9]	\p{Nd}	\d	\p{Digit}
-[:graph:]	Visible characters (anything except spaces and control characters)	[\x21-\x7E]	[^\p{Z}\p{C}]		\p{Graph}
-[:lower:]	Lowercase letters	[a-z]	\p{Ll}	\l	\p{Lower}
-[:print:]	Visible characters and spaces (anything except control characters)	[\x20-\x7E]	\P{C}		\p{Print}
-[:punct:]	Punctuation (and symbols).	[!"\#$%&'()*+,
-\-./:;<=>?@\[
-\\\]^_‘{|}~]	\p{P}		\p{Punct}
-[:space:]	All whitespace characters, including line breaks	[ \t\r\n\v\f]	[\p{Z}\t\r\n\v\f]	\s	\p{Space}
-[:upper:]	Uppercase letters	[A-Z]	\p{Lu}	\u	\p{Upper}
-[:word:]	Word characters (letters, numbers and underscores)	[A-Za-z0-9_]	[\p{L}\p{Nl}
- \p{Nd}\p{Pc}]	\w	\p{IsWord}
-[:xdigit:]	Hexadecimal digits	[A-Fa-f0-9]	[A-Fa-f0-9]		\p{XDigit}
-				 */
+				var punct = new List<int>();
+				punct.AddRange(uca[(int)UnicodeCategory.ClosePunctuation]);
+				punct.AddRange(uca[(int)UnicodeCategory.ConnectorPunctuation]);
+				punct.AddRange(uca[(int)UnicodeCategory.DashPunctuation]);
+				punct.AddRange(uca[(int)UnicodeCategory.FinalQuotePunctuation]);
+				punct.AddRange(uca[(int)UnicodeCategory.InitialQuotePunctuation]);
+				punct.AddRange(uca[(int)UnicodeCategory.OpenPunctuation]);
+				punct.AddRange(uca[(int)UnicodeCategory.OtherPunctuation]);
+
+				var word = new List<int>();
+				word.AddRange(isLetter);
+				word.AddRange(uca[(int)UnicodeCategory.LetterNumber]);
+				word.AddRange(uca[(int)UnicodeCategory.ConnectorPunctuation]);
+				word.AddRange(uca[(int)UnicodeCategory.DecimalDigitNumber]);
+
+				var xdigit = new List<int>();
+				xdigit.Add('0');
+				xdigit.Add('9');
+				xdigit.Add('A');
+				xdigit.Add('F');
+				xdigit.Add('a');
+				xdigit.Add('f');
 
 				td.Members.Add(CU.Field(uca.GetType(), "UnicodeCategories", MemberAttributes.Public | MemberAttributes.Static, CU.Literal(uca)));
+				td.Members.Add(CU.Field(nuca.GetType(), "NotUnicodeCategories", MemberAttributes.Public | MemberAttributes.Static, CU.Literal(nuca)));
 				td.Members.Add(CU.Field(typeof(int[]), "IsLetter", MemberAttributes.Public | MemberAttributes.Static, CU.Literal(_GetRanges(isLetter))));
 				td.Members.Add(CU.Field(typeof(int[]), "IsDigit", MemberAttributes.Public | MemberAttributes.Static, CU.Literal(_GetRanges(isDigit))));
 				td.Members.Add(CU.Field(typeof(int[]), "IsLetterOrDigit", MemberAttributes.Public | MemberAttributes.Static, CU.Literal(_GetRanges(isLetterOrDigit))));
 				td.Members.Add(CU.Field(typeof(int[]), "IsWhiteSpace", MemberAttributes.Public | MemberAttributes.Static, CU.Literal(_GetRanges(isWhiteSpace))));
+				td.Members.Add(CU.Field(typeof(int[]), "alnum", MemberAttributes.Public | MemberAttributes.Static, CU.Literal(_GetRanges(alnum))));
+				td.Members.Add(CU.Field(typeof(int[]), "alpha", MemberAttributes.Public | MemberAttributes.Static, CU.Literal(_GetRanges(alpha))));
+				td.Members.Add(CU.Field(typeof(int[]), "cntrl", MemberAttributes.Public | MemberAttributes.Static, CU.ArrIndexer(CU.FieldRef(CU.TypeRef(td.Name), "UnicodeCategories"), CU.Literal((int)UnicodeCategory.Control))));
+				td.Members.Add(CU.Field(typeof(int[]), "digit", MemberAttributes.Public | MemberAttributes.Static, CU.ArrIndexer(CU.FieldRef(CU.TypeRef(td.Name), "UnicodeCategories"), CU.Literal((int)UnicodeCategory.DecimalDigitNumber))));
+				td.Members.Add(CU.Field(typeof(int[]), "graph", MemberAttributes.Public | MemberAttributes.Static, CU.Literal(_GetRanges(graph))));
+				td.Members.Add(CU.Field(typeof(int[]), "ascii", MemberAttributes.Public | MemberAttributes.Static, CU.Literal(asciiRanges)));
+				td.Members.Add(CU.Field(typeof(int[]), "blank", MemberAttributes.Public | MemberAttributes.Static, CU.Literal(_GetRanges(blank))));
+				td.Members.Add(CU.Field(typeof(int[]), "lower", MemberAttributes.Public | MemberAttributes.Static, CU.ArrIndexer(CU.FieldRef(CU.TypeRef(td.Name), "UnicodeCategories"), CU.Literal((int)UnicodeCategory.LowercaseLetter))));
+				td.Members.Add(CU.Field(typeof(int[]), "print", MemberAttributes.Public | MemberAttributes.Static, CU.ArrIndexer(CU.FieldRef(CU.TypeRef(td.Name), "NotUnicodeCategories"), CU.Literal((int)UnicodeCategory.Control))));
+				td.Members.Add(CU.Field(typeof(int[]), "punct", MemberAttributes.Public | MemberAttributes.Static, CU.Literal(_GetRanges(punct))));
+				td.Members.Add(CU.Field(typeof(int[]), "space", MemberAttributes.Public | MemberAttributes.Static, CU.FieldRef(CU.TypeRef(td.Name), "IsWhiteSpace")));
+				td.Members.Add(CU.Field(typeof(int[]), "upper", MemberAttributes.Public | MemberAttributes.Static, CU.ArrIndexer(CU.FieldRef(CU.TypeRef(td.Name), "UnicodeCategories"), CU.Literal((int)UnicodeCategory.UppercaseLetter))));
+				td.Members.Add(CU.Field(typeof(int[]), "word", MemberAttributes.Public | MemberAttributes.Static, CU.Literal(_GetRanges(word))));
+				td.Members.Add(CU.Field(typeof(int[]), "xdigit", MemberAttributes.Public | MemberAttributes.Static, CU.Literal(_GetRanges(xdigit))));
 				sw.Write(CU.ToString(ccu));	
 			}
 		}

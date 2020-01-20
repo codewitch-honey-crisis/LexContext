@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 
 namespace L
@@ -10,10 +11,16 @@ namespace L
 		static IDictionary<string,int[]> _GetCharacterClasses()
 		{
 			var result = new Dictionary<string, int[]>();
-			result.Add("IsLetter", IsLetter);
-			result.Add("IsDigit", IsDigit);
-			result.Add("IsLetterOrDigit", IsLetterOrDigit);
-			result.Add("IsWhiteSpace", IsWhiteSpace);
+			var fa = typeof(CharCls).GetFields();
+			for (var i = 0; i < fa.Length; i++)
+			{
+				var f = fa[i];
+				if (f.FieldType == typeof(int[]))
+				{
+					result.Add(f.Name, (int[])f.GetValue(null));
+				}
+				
+			}
 			return result;
 		}
 		public static IDictionary<string,int[]> CharacterClasses {  get { return _CharacterClasses.Value; } }

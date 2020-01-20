@@ -8,6 +8,7 @@ namespace LexDemo
 	{
 		static void Main()
 		{
+			
 			var test = @"""([^""]|\\[\\'""abfnrtv0])*""";
 			test = @"(_|[[:IsLetterOrDigit:]])";
 			var cc = Lex.GetCharacterClass("IsLetterOrDigit");
