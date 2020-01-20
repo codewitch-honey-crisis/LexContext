@@ -49,6 +49,8 @@
     <Compile Include="Export\Token.cs" />
     <Compile Include="Export\Tokenizer.cs" />
     <Content Include="Export\TokenizerTemplate.cs" />
+    <Compile Include="Lex.brick.cs" />
+    <Compile Include="LexContext.brick.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -56,16 +58,6 @@
     <None Include="App.config" />
     <None Include="Example.lx" />
     <None Include="Key.snk" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\LexContext\LexContext.csproj">
-      <Project>{240ac77d-3deb-4415-842b-8c0226d42593}</Project>
-      <Name>LexContext</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Lex\Lex.csproj">
-      <Project>{4faf16f7-0493-4429-9ea1-ba4a8ae86085}</Project>
-      <Name>Lex</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

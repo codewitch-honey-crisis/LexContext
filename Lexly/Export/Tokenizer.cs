@@ -404,7 +404,7 @@ namespace Lexly
 							_EnqueueFiber(ref nextFiberCount, ref _nextFibers, new TokenizerFiber(t, t.Index + 1, saved), sp + 1);
 						}
 					}
-					if(_Set==op)
+					else if(_Set==op)
 					{
 						if (_InRanges(pc, cur))
 						{
@@ -412,7 +412,7 @@ namespace Lexly
 							_EnqueueFiber(ref nextFiberCount, ref _nextFibers, new TokenizerFiber(t, t.Index + 1, saved), sp + 1);
 						}
 					}
-					if (_NSet == op) 
+					else if (_NSet == op) 
 					{
 						if (!_InRanges(pc, cur) && _EndOfInput != _ch)
 						{
@@ -420,7 +420,7 @@ namespace Lexly
 							_EnqueueFiber(ref nextFiberCount, ref _nextFibers, new TokenizerFiber(t, t.Index + 1, saved), sp + 1);
 						}
 					}
-					if (_UCode == op) 
+					else if (_UCode == op) 
 					{
 						var str = char.ConvertFromUtf32(cur);
 						if ((int)char.GetUnicodeCategory(str, 0) == pc[1])
@@ -429,7 +429,7 @@ namespace Lexly
 							_EnqueueFiber(ref nextFiberCount, ref _nextFibers, new TokenizerFiber(t, t.Index + 1, saved), sp + 1);
 						}
 					}
-					if (_NUCode == op) 
+					else if (_NUCode == op) 
 					{
 						var str = char.ConvertFromUtf32(cur);
 						if ((int)char.GetUnicodeCategory(str, 0) != pc[1] && _EndOfInput != _ch)
@@ -438,14 +438,14 @@ namespace Lexly
 							_EnqueueFiber(ref nextFiberCount, ref _nextFibers, new TokenizerFiber(t, t.Index + 1, saved), sp + 1);
 						}
 					}
-					if (_Any == op) {
+					else if (_Any == op) {
 						if (_EndOfInput != _ch)
 						{
 							passed = true;
 							_EnqueueFiber(ref nextFiberCount, ref _nextFibers, new TokenizerFiber(t, t.Index + 1, saved), sp + 1);
 						}
 					}
-					if (_Match == op)
+					else if (_Match == op)
 					{
 						matched = saved;
 						match = pc[1];

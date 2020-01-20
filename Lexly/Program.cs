@@ -10,7 +10,7 @@ using L;
 using LC;
 namespace Lexly
 {
-	class Program
+	public class Program
 	{
 		static readonly string CodeBase = _GetCodeBase();
 		static readonly string FileName = Path.GetFileName(CodeBase);
