@@ -182,6 +182,11 @@ namespace Lexly
 					{
 						// update the cursor position and lex the next input, skipping this one
 						done = false;
+						if (_ch == _EndOfInput)
+						{
+							_state = _EndOfInput;
+							return false;
+						}
 						_current.Line = _line;
 						_current.Column = _column;
 						_current.Position = _position;

@@ -211,6 +211,10 @@ namespace LexlyDemo {
                                 == (0 
                                 == (this._nodeFlags[this._current.SymbolId] & 1))))) {
                         done = false;
+                        if ((this._ch == TokenizerEnumerator._EndOfInput)) {
+                            this._state = TokenizerEnumerator._EndOfInput;
+                            return false;
+                        }
                         this._current.Line = this._line;
                         this._current.Column = this._column;
                         this._current.Position = this._position;

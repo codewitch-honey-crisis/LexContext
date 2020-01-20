@@ -4,6 +4,9 @@ using System.Collections.Generic;
 using System.IO;
 using L;
 #endregion
+// Pre-build steps
+// "$(SolutionDir)Lexly\bin\Release\Lexly.exe" "$(ProjectDir)Example.lx" /output "$(ProjectDir)ExampleTokenizer.cs" /namespace LexlyDemo
+//"$(SolutionDir)Lexly\bin\Release\Lexly.exe" "$(ProjectDir)Slang.lx" /output "$(ProjectDir)SlangTokenizer.cs" /namespace LexlyDemo /noshared
 namespace LexlyDemo
 {
 	using ET = ExampleTokenizer;
