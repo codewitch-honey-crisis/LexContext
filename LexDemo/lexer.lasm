@@ -27,7 +27,7 @@ jmp int_loop
 int_done: save 1
 match 1
 
-space: ; [\t\n\v\f\r ]
+space: ; (\t|\n|\v|\f|\r| )
 save 0
 set "\t", "\n", "\v", "\f", "\r", " "
 save 1

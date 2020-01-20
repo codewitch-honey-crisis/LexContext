@@ -264,11 +264,29 @@ namespace L
 						if (-1 != pc.Advance())
 						{
 							next = Parse(pc);
-							var alt = new Ast();
-							alt.Kind = Ast.Alt;
-							alt.Left = result;
-							alt.Right = next;
-							result = alt;
+							if (Ast.Lit == result.Kind && Ast.Lit == next.Kind)
+							{
+								var set = new Ast();
+								set.Kind = Set;
+								set.Ranges = new int[] { result.Value, result.Value, next.Value, next.Value };
+								result = set;
+							}
+							else if (Ast.Lit == result.Kind && Ast.Set == next.Kind)
+							{
+								var set = new Ast();
+								set.Kind = Ast.Set;
+								set.Ranges = new int[next.Ranges.Length + 2];
+								set.Ranges[0] = result.Value;
+								set.Ranges[1] = result.Value;
+								Array.Copy(next.Ranges, 0, set.Ranges, 2, next.Ranges.Length);
+								result = set;
+							} else { 
+								var alt = new Ast();
+								alt.Kind = Ast.Alt;
+								alt.Left = result;
+								alt.Right = next;
+								result = alt;
+							}
 						}
 						else
 						{
