@@ -13,7 +13,8 @@ namespace LexDemo
 	{
 		static void Main()
 		{
-			Console.WriteLine(Lex.Disassemble(Lex.AssembleFrom(@"..\..\lexer.lasm")));
+			//Console.WriteLine(Lex.Disassemble(Lex.AssembleFrom(@"..\..\lexer.lasm")));
+			_RunLexer();
 		}
 		static void _RunLexer()
 		{
@@ -27,9 +28,9 @@ namespace LexDemo
 			
 			// dump the program to the console
 			Console.WriteLine(Lex.Disassemble(prog));
-			
+
 			// our test data
-			var text = "fubar bar 123 1foo bar -243 @#*! 0";
+			var text = "foo 123 bar";//"fubar bar 123 1foo bar -243 @#*! 0";
 			Console.WriteLine("Lex: " + text);
 
 			// spin up a lexer context

@@ -10,7 +10,7 @@ namespace Lexly
 	{
 		
 		public const int DefaultTabWidth = 4;
-
+		public const int ErrorSymbol = -1;
 		private int[][] _program;
 		private string[] _blockEnds;
 		// our node flags. Currently only used for the hidden attribute
@@ -373,10 +373,10 @@ namespace Lexly
 				var ch1 = (char)_ch;
 				if (char.IsHighSurrogate(ch1))
 				{
-					if(!_MoveNextInput())
+					if (!_MoveNextInput())
 						throw new IOException(string.Format("Expecting low surrogate in unicode stream. The input source is corrupt or not valid Unicode at line {0}, column {1}, position {2}", _line, _column, _position));
 					// compensate for doublewide char
-					--_column; 
+					--_column;
 					var ch2 = (char)_ch;
 					cur = char.ConvertToUtf32(ch1, ch2);
 				}
@@ -384,6 +384,8 @@ namespace Lexly
 					cur = ch1;
 
 			}
+			else
+				cur = -1;
 
 			while (0 < currentFiberCount)
 			{
@@ -465,7 +467,7 @@ namespace Lexly
 							if (!_MoveNextInput())
 								throw new IOException(string.Format("Expecting low surrogate in unicode stream. The input source is corrupt or not valid Unicode at line {0}, column {1}, position {2}", _line, _column, _position));
 							// compensate for doublewide char
-							--_column; 
+							--_column;
 							++sp;
 							var ch2 = (char)_ch;
 							cur = char.ConvertToUtf32(ch1, ch2);
@@ -473,6 +475,8 @@ namespace Lexly
 						else
 							cur = ch1;
 					}
+					else
+						cur = -1;
 					++sp;
 				}
 				tmp = _currentFibers;

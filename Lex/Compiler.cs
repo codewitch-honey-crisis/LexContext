@@ -31,7 +31,24 @@ namespace L
 			}
 			return prog;
 		}
-		
+		internal static void EmitPart(string literal, IList<int[]> prog)
+		{
+			for (var i = 0; i < literal.Length; ++i)
+			{
+				int ch = literal[i];
+				if (char.IsHighSurrogate(literal[i]))
+				{
+					if (i == literal.Length - 1)
+						throw new ArgumentException("The literal contains an incomplete unicode surrogate.", nameof(literal));
+					ch = char.ConvertToUtf32(literal, i);
+					++i;
+				}
+				var lit = new int[2];
+				lit[0] = Char;
+				lit[1] = ch;
+				prog.Add(lit);
+			}
+		}
 		internal static void EmitPart(Ast ast, IList<int[]> prog)
 		{
 			int[] inst,jmp;
@@ -426,16 +443,28 @@ namespace L
 		}
 		internal static int[][] EmitLexer(params Ast[] expressions)
 		{
+			var parts = new KeyValuePair<int, int[][]>[expressions.Length];
+			for (var i = 0;i<expressions.Length;++i)
+			{
+				var l = new List<int[]>();
+				EmitPart(expressions[i], l);
+				parts[i] = new KeyValuePair<int,int[][]>(i,l.ToArray());
+			}
+			return EmitLexer(parts);
+		}
+		internal static int[][] EmitLexer(IEnumerable<KeyValuePair<int,int[][]>> parts)
+		{
+			var l = new List<KeyValuePair<int, int[][]>>(parts);
 			var prog = new List<int[]>();
 			int[] match, save;
 			// generate the primary split instruction
-			var split = new int[expressions.Length + 2];
+			var split = new int[l.Count+ 2];
 			split[0] = Compiler.Split;
 			prog.Add(split);
 			// for each expressions, render a save 0
 			// followed by the the instructions
 			// followed by save 1, and then match <i>
-			for (var i = 0; i < expressions.Length; i++)
+			for (int ic=l.Count,i = 0; i < ic; ++i)
 			{
 				split[i + 1] = prog.Count;
 				// save 0
@@ -444,16 +473,17 @@ namespace L
 				save[1] = 0;
 				prog.Add(save);
 				// expr
-				EmitPart(expressions[i], prog);
+				Fixup(l[i].Value, prog.Count);
+				prog.AddRange(l[i].Value);
 				// save 1
 				save = new int[2];
 				save[0] = Save;
 				save[1] = 1;
 				prog.Add(save);
-				// match <i>
+				// match <l[i].Key>
 				match = new int[2];
 				match[0] = Match;
-				match[1] = i;
+				match[1] = l[i].Key;
 				prog.Add(match);
 			}
 			// generate the error condition
@@ -497,6 +527,24 @@ namespace L
 				var kvp = result[i];
 				ranges[j] = kvp.Key;
 				ranges[j + 1] = kvp.Value;
+			}
+		}
+		internal static void Fixup(int[][] program, int offset)
+		{
+			for(var i = 0;i<program.Length;i++)
+			{
+				var inst = program[i];
+				var op = inst[0];
+				switch(op)
+				{
+					case Jmp:
+						inst[1] += offset;
+						break;
+					case Split:
+						for (var j = 1; j < inst.Length; j++)
+							inst[j] += offset;
+						break;
+				}
 			}
 		}
 	}

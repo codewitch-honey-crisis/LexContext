@@ -9,9 +9,10 @@ namespace L
 		internal static List<Inst> Parse(LexContext l)
 		{
 			var result = new List<Inst>();
-			while(-1!=l.Current)
+			while(-1!=l.Current && '}'!=l.Current)
 			{
 				result.Add(Inst.Parse(l));
+				
 			}
 			return result;
 		}
@@ -21,6 +22,7 @@ namespace L
 			var result = new List<int[]>(ic);
 			var lmap = new Dictionary<string, int>();
 			var pc = 0;
+			var regm = new Dictionary<Inst, int[][]>();
 			for(var i = 0;i<ic;++i)
 			{
 				var inst = instructions[i];
@@ -29,6 +31,12 @@ namespace L
 					if (lmap.ContainsKey(inst.Name))
 						throw new InvalidProgramException("Duplicate label " + inst.Name + " found at line " + inst.Line.ToString());
 					lmap.Add(inst.Name, pc);
+				} else if(inst.Opcode==Inst.Regex)
+				{
+					var reg = new List<int[]>();
+					Compiler.EmitPart(inst.Expr, reg);
+					regm.Add(inst, reg.ToArray());
+					pc += reg.Count;
 				}
 				else 
 					++pc;
@@ -41,6 +49,10 @@ namespace L
 				int[] code = null;
 				switch(inst.Opcode)
 				{
+					case Inst.Regex:
+						Compiler.Fixup(regm[inst], pc);
+						result.AddRange(regm[inst]);
+						break;
 					case Inst.Label:
 						break;
 					case Inst.Any:
@@ -87,8 +99,8 @@ namespace L
 				if(null!=code)
 				{
 					result.Add(code);
-					++pc;
 				}
+				pc = result.Count;
 			}
 			return result;
 		}
@@ -97,7 +109,8 @@ namespace L
 	class Inst
 	{
 		#region Opcodes
-		internal const int Label = 0; // label: (not a "real" instruction, just a marker we use to fill in addresses after the parse)
+		internal const int Regex = -2; // regex (expression) - a macro for a regular expression - will be replaced by the machine code represented by the the expression
+		internal const int Label = -1; // label: (not a "real" instruction, just a marker we use to fill in addresses after the parse)
 		internal const int Match = 1; // match symbol
 		internal const int Jmp = 2; // jmp addr
 		internal const int Split = 3; // split addr1, addr2
@@ -116,6 +129,7 @@ namespace L
 		public int Value;
 		public string Name;
 		public int Line;
+		public Ast Expr;
 		internal static Inst Parse(LexContext input)
 		{
 			Inst result = new Inst();
@@ -127,6 +141,16 @@ namespace L
 			var id = _ParseIdentifier(input);
 			switch (id)
 			{
+				case "regex":
+					_SkipWhiteSpace(input);
+					result.Opcode = Regex;
+					input.Expecting('(');
+					input.Advance();
+					result.Expr=Ast.Parse(input);
+					input.Expecting(')');
+					input.Advance();
+					_SkipToNextInstruction(input);
+					break;
 				case "match":
 					_SkipWhiteSpace(input);
 					var ll = input.CaptureBuffer.Length;
@@ -218,6 +242,7 @@ namespace L
 					result.Name = id;
 					break;
 			}
+			_SkipCommentsAndWhiteSpace(input);
 			return result;
 		}
 		static void _SkipWhiteSpace(LexContext l)

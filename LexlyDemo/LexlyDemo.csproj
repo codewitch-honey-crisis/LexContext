@@ -4,10 +4,10 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{4B30D333-1DB5-4035-8996-E233AAA23C0D}</ProjectGuid>
+    <ProjectGuid>{06B39ACD-EB4E-480E-A153-14851E16F5D7}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>Lexly</RootNamespace>
-    <AssemblyName>Lexly</AssemblyName>
+    <RootNamespace>LexlyDemo</RootNamespace>
+    <AssemblyName>LexlyDemo</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -32,30 +32,17 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
-  <PropertyGroup>
-    <SignAssembly>true</SignAssembly>
-  </PropertyGroup>
-  <PropertyGroup>
-    <AssemblyOriginatorKeyFile>Key.snk</AssemblyOriginatorKeyFile>
-  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
-    <Reference Include="System.Numerics" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CodeDomUtility.cs" />
-    <Compile Include="CodeDomVisitor.cs" />
-    <Compile Include="Deslanged.Export.cs" />
-    <Compile Include="Export\Token.cs" />
-    <Compile Include="Export\Tokenizer.cs" />
-    <Content Include="Export\TokenizerTemplate.cs" />
+    <Compile Include="ExampleTokenizer.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
     <None Include="Example.lx" />
-    <None Include="Key.snk" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\LexContext\LexContext.csproj">
@@ -69,8 +56,6 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PreBuildEvent>"$(SolutionDir)csbrick.exe" "$(SolutionDir)LexContext\LexContext.csproj" /output "$(ProjectDir)LexContext.brick.cs"
-"$(SolutionDir)csbrick.exe" "$(SolutionDir)Lex\Lex.csproj" /output "$(ProjectDir)Lex.brick.cs"
-"$(SolutionDir)deslang.exe" "$(ProjectDir)Export\Token.cs" "$(ProjectDir)Export\Tokenizer.cs" "$(ProjectDir)Export\TokenizerTemplate.cs" /output "$(ProjectDir)Deslanged.Export.cs" /mutable /ifstale</PreBuildEvent>
+    <PreBuildEvent>"$(SolutionDir)Lexly\bin\Release\Lexly.exe" "$(ProjectDir)Example.lx" /output "$(ProjectDir)ExampleTokenizer.cs" /namespace LexlyDemo</PreBuildEvent>
   </PropertyGroup>
 </Project>

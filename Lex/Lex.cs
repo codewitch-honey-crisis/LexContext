@@ -19,6 +19,15 @@ namespace L
 		/// </summary>
 		/// <param name="asmCode">The code to assemble</param>
 		/// <returns>A program</returns>
+		public static int[][] Assemble(LexContext asmCode)
+		{
+			return Assembler.Emit(Assembler.Parse(asmCode)).ToArray();
+		}
+		/// <summary>
+		/// Assembles the assembly code into a program
+		/// </summary>
+		/// <param name="asmCode">The code to assemble</param>
+		/// <returns>A program</returns>
 		public static int[][] Assemble(string asmCode)
 		{
 			var lc = LexContext.Create(asmCode);
@@ -55,16 +64,50 @@ namespace L
 			return Assembler.Emit(Assembler.Parse(lc)).ToArray();
 		}
 		/// <summary>
-		/// Compiles a single regular expression into a program
+		/// Compiles a single regular expression into a program segment
+		/// </summary>
+		/// <param name="input">The expression to compile</param>
+		/// <returns>A part of a program</returns>
+		public static int[][] CompileRegexPart(LexContext input)
+		{
+			var ast = Ast.Parse(input);
+			var prog = new List<int[]>();
+			Compiler.EmitPart(ast, prog);
+			return prog.ToArray();
+		}
+		/// <summary>
+		/// Compiles a single regular expression into a program segment
 		/// </summary>
 		/// <param name="expression">The expression to compile</param>
-		/// <returns>A program</returns>
-		public static int[][] CompileRegex(string expression)
+		/// <returns>A part of a program</returns>
+		public static int[][] CompileRegexPart(string expression)
 		{
-			var ast = Ast.Parse(LexContext.Create(expression));
-			var prog = new List<int[]>();
-			return Compiler.Emit(ast, 0).ToArray();
+			return CompileRegexPart(LexContext.Create(expression));
 		}
+		/// <summary>
+		/// Compiles a single literal expression into a program segment
+		/// </summary>
+		/// <param name="input">The expression to compile</param>
+		/// <returns>A part of a program</returns>
+		public static int[][] CompileLiteralPart(LexContext input)
+		{
+			var ll = input.CaptureBuffer.Length;
+			while (-1 != input.Current)
+				input.Capture();
+			return CompileLiteralPart(input.GetCapture(ll));
+		}
+		/// <summary>
+		/// Compiles a single literal expression into a program segment
+		/// </summary>
+		/// <param name="expression">The expression to compile</param>
+		/// <returns>A part of a program</returns>
+		public static int[][] CompileLiteralPart(string expression)
+		{
+			var prog = new List<int[]>();
+			Compiler.EmitPart(expression, prog);
+			return prog.ToArray();
+		}
+
 		/// <summary>
 		/// Compiles a series of regular expressions into a program
 		/// </summary>
@@ -76,6 +119,15 @@ namespace L
 			for(var i = 0;i<expressions.Length;++i)
 				asts[i] = Ast.Parse(LexContext.Create(expressions[i]));
 			return Compiler.EmitLexer(asts);
+		}
+		/// <summary>
+		/// Links a series of partial programs together into single lexer program
+		/// </summary>
+		/// <param name="parts">The parts</param>
+		/// <returns>A program</returns>
+		public static int[][] LinkLexerParts(IEnumerable<KeyValuePair<int,int[][]>> parts)
+		{
+			return Compiler.EmitLexer(parts);
 		}
 		/// <summary>
 		/// Disassembles the specified program
