@@ -67,6 +67,10 @@ namespace L
 					if(null!=ast.Right)
 						EmitPart(ast.Right,prog);
 					break;
+				case Ast.Dot: // dot/any
+					inst = new int[1];
+					inst[0] = Any;
+					break;
 				case Ast.Alt: // alternation
 					// first handle the cases where one
 					// of the children is null such as

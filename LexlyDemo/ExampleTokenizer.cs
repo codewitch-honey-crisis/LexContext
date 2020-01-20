@@ -432,48 +432,60 @@ namespace LexlyDemo {
                             TokenizerEnumerator._EnqueueFiber(ref nextFiberCount, ref this._nextFibers, new TokenizerFiber(t, (t.Index + 1), saved), (sp + 1));
                         }
                     }
-                    if ((TokenizerEnumerator._Set == op)) {
-                        if (TokenizerEnumerator._InRanges(pc, cur)) {
-                            passed = true;
-                            TokenizerEnumerator._EnqueueFiber(ref nextFiberCount, ref this._nextFibers, new TokenizerFiber(t, (t.Index + 1), saved), (sp + 1));
+                    else {
+                        if ((TokenizerEnumerator._Set == op)) {
+                            if (TokenizerEnumerator._InRanges(pc, cur)) {
+                                passed = true;
+                                TokenizerEnumerator._EnqueueFiber(ref nextFiberCount, ref this._nextFibers, new TokenizerFiber(t, (t.Index + 1), saved), (sp + 1));
+                            }
                         }
-                    }
-                    if ((TokenizerEnumerator._NSet == op)) {
-                        if (((false == TokenizerEnumerator._InRanges(pc, cur)) 
-                                    && (false 
-                                    == (TokenizerEnumerator._EndOfInput == this._ch)))) {
-                            passed = true;
-                            TokenizerEnumerator._EnqueueFiber(ref nextFiberCount, ref this._nextFibers, new TokenizerFiber(t, (t.Index + 1), saved), (sp + 1));
+                        else {
+                            if ((TokenizerEnumerator._NSet == op)) {
+                                if (((false == TokenizerEnumerator._InRanges(pc, cur)) 
+                                            && (false 
+                                            == (TokenizerEnumerator._EndOfInput == this._ch)))) {
+                                    passed = true;
+                                    TokenizerEnumerator._EnqueueFiber(ref nextFiberCount, ref this._nextFibers, new TokenizerFiber(t, (t.Index + 1), saved), (sp + 1));
+                                }
+                            }
+                            else {
+                                if ((TokenizerEnumerator._UCode == op)) {
+                                    string str = char.ConvertFromUtf32(cur);
+                                    if ((((int)(char.GetUnicodeCategory(str, 0))) == pc[1])) {
+                                        passed = true;
+                                        TokenizerEnumerator._EnqueueFiber(ref nextFiberCount, ref this._nextFibers, new TokenizerFiber(t, (t.Index + 1), saved), (sp + 1));
+                                    }
+                                }
+                                else {
+                                    if ((TokenizerEnumerator._NUCode == op)) {
+                                        string str = char.ConvertFromUtf32(cur);
+                                        if (((false 
+                                                    == (((int)(char.GetUnicodeCategory(str, 0))) == pc[1])) 
+                                                    && (false 
+                                                    == (TokenizerEnumerator._EndOfInput == this._ch)))) {
+                                            passed = true;
+                                            TokenizerEnumerator._EnqueueFiber(ref nextFiberCount, ref this._nextFibers, new TokenizerFiber(t, (t.Index + 1), saved), (sp + 1));
+                                        }
+                                    }
+                                    else {
+                                        if ((TokenizerEnumerator._Any == op)) {
+                                            if ((false 
+                                                        == (TokenizerEnumerator._EndOfInput == this._ch))) {
+                                                passed = true;
+                                                TokenizerEnumerator._EnqueueFiber(ref nextFiberCount, ref this._nextFibers, new TokenizerFiber(t, (t.Index + 1), saved), (sp + 1));
+                                            }
+                                        }
+                                        else {
+                                            if ((TokenizerEnumerator._Match == op)) {
+                                                matched = saved;
+                                                match = pc[1];
+                                                i = currentFiberCount;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
-                    }
-                    if ((TokenizerEnumerator._UCode == op)) {
-                        string str = char.ConvertFromUtf32(cur);
-                        if ((((int)(char.GetUnicodeCategory(str, 0))) == pc[1])) {
-                            passed = true;
-                            TokenizerEnumerator._EnqueueFiber(ref nextFiberCount, ref this._nextFibers, new TokenizerFiber(t, (t.Index + 1), saved), (sp + 1));
-                        }
-                    }
-                    if ((TokenizerEnumerator._NUCode == op)) {
-                        string str = char.ConvertFromUtf32(cur);
-                        if (((false 
-                                    == (((int)(char.GetUnicodeCategory(str, 0))) == pc[1])) 
-                                    && (false 
-                                    == (TokenizerEnumerator._EndOfInput == this._ch)))) {
-                            passed = true;
-                            TokenizerEnumerator._EnqueueFiber(ref nextFiberCount, ref this._nextFibers, new TokenizerFiber(t, (t.Index + 1), saved), (sp + 1));
-                        }
-                    }
-                    if ((TokenizerEnumerator._Any == op)) {
-                        if ((false 
-                                    == (TokenizerEnumerator._EndOfInput == this._ch))) {
-                            passed = true;
-                            TokenizerEnumerator._EnqueueFiber(ref nextFiberCount, ref this._nextFibers, new TokenizerFiber(t, (t.Index + 1), saved), (sp + 1));
-                        }
-                    }
-                    if ((TokenizerEnumerator._Match == op)) {
-                        matched = saved;
-                        match = pc[1];
-                        i = currentFiberCount;
                     }
                 }
                 if (passed) {

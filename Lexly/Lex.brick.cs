@@ -77,35 +77,35 @@ e.Current));}}throw new ExpectingException("Unterminated escape sequence",pc.Lin
 #region Kinds
 public const int None=0;public const int Lit=1;public const int Set=2;public const int NSet=3;public const int Cls=4;public const int Cat=5;public const
  int Opt=6;public const int Alt=7;public const int Star=8;public const int Plus=9;public const int Rep=10;public const int UCode=11;public const int NUCode
-=12;
+=12;internal const int Dot=13;
 #endregion Kinds
 public int Kind=None;public bool IsLazy=false;public Ast Left=null;public Ast Right=null;public int Value='\0';public int[]Ranges;public int Min=0;public
  int Max=0;internal static Ast Parse(LexContext pc){Ast result=null,next=null;int ich;pc.EnsureStarted();while(true){switch(pc.Current){case-1:return result;
-case'.':var nset=new Ast();nset.Kind=Ast.Set;nset.Ranges=new int[]{char.MinValue,char.MaxValue};if(null==result)result=nset;else{var cat=new Ast();cat.Kind
-=Ast.Cat;cat.Left=result;cat.Right=nset;result=cat;}pc.Advance();result=_ParseModifier(result,pc);break;case'\\':pc.Advance();pc.Expecting();var isNot
-=false;switch(pc.Current){case'P':isNot=true;goto case'p';case'p':pc.Advance();pc.Expecting('{');var uc=new StringBuilder();int uli=pc.Line;int uco=pc.Column;
-long upo=pc.Position;while(-1!=pc.Advance()&&'}'!=pc.Current)uc.Append((char)pc.Current);pc.Expecting('}');pc.Advance();int uci=0;switch(uc.ToString())
-{case"Pe":uci=21;break;case"Pc":uci=19;break;case"Cc":uci=14;break;case"Sc":uci=26;break;case"Pd":uci=19;break;case"Nd":uci=8;break;case"Me":uci=7;break;
-case"Pf":uci=23;break;case"Cf":uci=15;break;case"Pi":uci=22;break;case"Nl":uci=9;break;case"Zl":uci=12;break;case"Ll":uci=1;break;case"Sm":uci=25;break;
-case"Lm":uci=3;break;case"Sk":uci=27;break;case"Mn":uci=5;break;case"Ps":uci=20;break;case"Lo":uci=4;break;case"Cn":uci=29;break;case"No":uci=10;break;
-case"Po":uci=24;break;case"So":uci=28;break;case"Zp":uci=13;break;case"Co":uci=17;break;case"Zs":uci=11;break;case"Mc":uci=6;break;case"Cs":uci=16;break;
-case"Lt":uci=2;break;case"Lu":uci=0;break;}next=new Ast();next.Value=uci;next.Kind=isNot?Ast.NUCode:Ast.UCode;break;case'd':next=new Ast();next.Kind=Ast.Set;
-next.Ranges=new int[]{'0','9'};pc.Advance();break;case'D':next=new Ast();next.Kind=Ast.NSet;next.Ranges=new int[]{'0','9'};pc.Advance();break;case's':
-next=new Ast();next.Kind=Ast.Set;next.Ranges=new int[]{'\t','\t',' ',' ','\r','\r','\n','\n','\f','\f'};pc.Advance();break;case'S':next=new Ast();next.Kind
-=Ast.NSet;next.Ranges=new int[]{'\t','\t',' ',' ','\r','\r','\n','\n','\f','\f'};pc.Advance();break;case'w':next=new Ast();next.Kind=Ast.Set;next.Ranges
-=new int[]{'_','_','0','9','A','Z','a','z',};pc.Advance();break;case'W':next=new Ast();next.Kind=Ast.NSet;next.Ranges=new int[]{'_','_','0','9','A','Z',
-'a','z',};pc.Advance();break;default:if(-1!=(ich=_ParseEscapePart(pc))){next=new Ast();next.Kind=Ast.Lit;next.Value=ich;}else{pc.Expecting(); return null;
-}break;}next=_ParseModifier(next,pc);if(null!=result){var cat=new Ast();cat.Kind=Ast.Cat;cat.Left=result;cat.Right=next;result=cat;}else result=next;break;
-case')':return result;case'(':pc.Advance();pc.Expecting();next=Parse(pc);pc.Expecting(')');pc.Advance();next=_ParseModifier(next,pc);if(null==result)result
-=next;else{var cat=new Ast();cat.Kind=Ast.Cat;cat.Left=result;cat.Right=next;result=cat;}break;case'|':if(-1!=pc.Advance()){next=Parse(pc);var alt=new
- Ast();alt.Kind=Ast.Alt;alt.Left=result;alt.Right=next;result=alt;}else{var opt=new Ast();opt.Kind=Ast.Opt;opt.Left=result;result=opt;}break;case'[':pc.ClearCapture();
-pc.Advance();pc.Expecting();isNot=false;if('^'==pc.Current){isNot=true;pc.Advance();pc.Expecting();}var ranges=_ParseRanges(pc);pc.Expecting(']');pc.Advance();
-next=new Ast();next.Kind=(isNot)?NSet:Set;next.Ranges=ranges;next=_ParseModifier(next,pc);if(null==result)result=next;else{var cat=new Ast();cat.Kind=
-Ast.Cat;cat.Left=result;cat.Right=next;result=cat;}break;default:ich=pc.Current;next=new Ast();next.Kind=Ast.Lit;next.Value=ich;pc.Advance();next=_ParseModifier(next,
-pc);if(null==result)result=next;else{var cat=new Ast();cat.Kind=Ast.Cat;cat.Left=result;cat.Right=next;result=cat;}break;}}}static int[]_ParseRanges(LexContext
- pc){pc.EnsureStarted();var result=new List<int>();int[]next=null;bool readDash=false;while(-1!=pc.Current&&']'!=pc.Current){switch(pc.Current){case'[':
- if(null!=next){result.Add(next[0]);result.Add(next[1]);if(readDash){result.Add('-');result.Add('-');}}pc.Advance();pc.Expecting(':');pc.Advance();var
- l=pc.CaptureBuffer.Length;var lin=pc.Line;var col=pc.Column;var pos=pc.Position;pc.TryReadUntil(':',false);var n=pc.GetCapture(l);pc.Advance();pc.Expecting(']');
+case'.':var dot=new Ast();dot.Kind=Ast.Dot;if(null==result)result=dot;else{var cat=new Ast();cat.Kind=Ast.Cat;cat.Left=result;cat.Right=dot;result=cat;
+}pc.Advance();result=_ParseModifier(result,pc);break;case'\\':pc.Advance();pc.Expecting();var isNot=false;switch(pc.Current){case'P':isNot=true;goto case
+'p';case'p':pc.Advance();pc.Expecting('{');var uc=new StringBuilder();int uli=pc.Line;int uco=pc.Column;long upo=pc.Position;while(-1!=pc.Advance()&&'}'
+!=pc.Current)uc.Append((char)pc.Current);pc.Expecting('}');pc.Advance();int uci=0;switch(uc.ToString()){case"Pe":uci=21;break;case"Pc":uci=19;break;case
+"Cc":uci=14;break;case"Sc":uci=26;break;case"Pd":uci=19;break;case"Nd":uci=8;break;case"Me":uci=7;break;case"Pf":uci=23;break;case"Cf":uci=15;break;case
+"Pi":uci=22;break;case"Nl":uci=9;break;case"Zl":uci=12;break;case"Ll":uci=1;break;case"Sm":uci=25;break;case"Lm":uci=3;break;case"Sk":uci=27;break;case
+"Mn":uci=5;break;case"Ps":uci=20;break;case"Lo":uci=4;break;case"Cn":uci=29;break;case"No":uci=10;break;case"Po":uci=24;break;case"So":uci=28;break;case
+"Zp":uci=13;break;case"Co":uci=17;break;case"Zs":uci=11;break;case"Mc":uci=6;break;case"Cs":uci=16;break;case"Lt":uci=2;break;case"Lu":uci=0;break;}next
+=new Ast();next.Value=uci;next.Kind=isNot?Ast.NUCode:Ast.UCode;break;case'd':next=new Ast();next.Kind=Ast.Set;next.Ranges=new int[]{'0','9'};pc.Advance();
+break;case'D':next=new Ast();next.Kind=Ast.NSet;next.Ranges=new int[]{'0','9'};pc.Advance();break;case's':next=new Ast();next.Kind=Ast.Set;next.Ranges
+=new int[]{'\t','\t',' ',' ','\r','\r','\n','\n','\f','\f'};pc.Advance();break;case'S':next=new Ast();next.Kind=Ast.NSet;next.Ranges=new int[]{'\t','\t',
+' ',' ','\r','\r','\n','\n','\f','\f'};pc.Advance();break;case'w':next=new Ast();next.Kind=Ast.Set;next.Ranges=new int[]{'_','_','0','9','A','Z','a','z',
+};pc.Advance();break;case'W':next=new Ast();next.Kind=Ast.NSet;next.Ranges=new int[]{'_','_','0','9','A','Z','a','z',};pc.Advance();break;default:if(-1
+!=(ich=_ParseEscapePart(pc))){next=new Ast();next.Kind=Ast.Lit;next.Value=ich;}else{pc.Expecting(); return null;}break;}next=_ParseModifier(next,pc);if
+(null!=result){var cat=new Ast();cat.Kind=Ast.Cat;cat.Left=result;cat.Right=next;result=cat;}else result=next;break;case')':return result;case'(':pc.Advance();
+pc.Expecting();next=Parse(pc);pc.Expecting(')');pc.Advance();next=_ParseModifier(next,pc);if(null==result)result=next;else{var cat=new Ast();cat.Kind=
+Ast.Cat;cat.Left=result;cat.Right=next;result=cat;}break;case'|':if(-1!=pc.Advance()){next=Parse(pc);var alt=new Ast();alt.Kind=Ast.Alt;alt.Left=result;
+alt.Right=next;result=alt;}else{var opt=new Ast();opt.Kind=Ast.Opt;opt.Left=result;result=opt;}break;case'[':pc.ClearCapture();pc.Advance();pc.Expecting();
+isNot=false;if('^'==pc.Current){isNot=true;pc.Advance();pc.Expecting();}var ranges=_ParseRanges(pc);pc.Expecting(']');pc.Advance();next=new Ast();next.Kind
+=(isNot)?NSet:Set;next.Ranges=ranges;next=_ParseModifier(next,pc);if(null==result)result=next;else{var cat=new Ast();cat.Kind=Ast.Cat;cat.Left=result;
+cat.Right=next;result=cat;}break;default:ich=pc.Current;next=new Ast();next.Kind=Ast.Lit;next.Value=ich;pc.Advance();next=_ParseModifier(next,pc);if(null
+==result)result=next;else{var cat=new Ast();cat.Kind=Ast.Cat;cat.Left=result;cat.Right=next;result=cat;}break;}}}static int[]_ParseRanges(LexContext pc)
+{pc.EnsureStarted();var result=new List<int>();int[]next=null;bool readDash=false;while(-1!=pc.Current&&']'!=pc.Current){switch(pc.Current){case'[': if
+(null!=next){result.Add(next[0]);result.Add(next[1]);if(readDash){result.Add('-');result.Add('-');}}pc.Advance();pc.Expecting(':');pc.Advance();var l=
+pc.CaptureBuffer.Length;var lin=pc.Line;var col=pc.Column;var pos=pc.Position;pc.TryReadUntil(':',false);var n=pc.GetCapture(l);pc.Advance();pc.Expecting(']');
 pc.Advance();int[]rngs;if(!CharCls.CharacterClasses.TryGetValue(n,out rngs)){var sa=new string[CharCls.CharacterClasses.Count];CharCls.CharacterClasses.Keys.CopyTo(sa,
 0);throw new ExpectingException("Invalid character class "+n,lin,col,pos,pc.FileOrUrl,sa);}result.AddRange(rngs);readDash=false;next=null;break;case'\\':
 pc.Advance();pc.Expecting();switch(pc.Current){case'h':_ParseCharClassEscape(pc,"space",result,ref next,ref readDash);break;case'd':_ParseCharClassEscape(pc,
@@ -508,25 +508,25 @@ Match;match[1]=symbolId;prog.Add(match);}return prog;}internal static void EmitP
 {int ch=literal[i];if(char.IsHighSurrogate(literal[i])){if(i==literal.Length-1)throw new ArgumentException("The literal contains an incomplete unicode surrogate.",
 nameof(literal));ch=char.ConvertToUtf32(literal,i);++i;}var lit=new int[2];lit[0]=Char;lit[1]=ch;prog.Add(lit);}}internal static void EmitPart(Ast ast,
 IList<int[]>prog){int[]inst,jmp;switch(ast.Kind){case Ast.Lit: inst=new int[2];inst[0]=Char;inst[1]=ast.Value;prog.Add(inst);break;case Ast.Cat: if(null!=ast.Left)
-EmitPart(ast.Left,prog);if(null!=ast.Right)EmitPart(ast.Right,prog);break;case Ast.Alt: if(null==ast.Right){if(null==ast.Left){ return;} inst=new int[3];
-inst[0]=Split;prog.Add(inst);var i=prog.Count;EmitPart(ast.Left,prog);inst[1]=i;inst[2]=prog.Count;return;}if(null==ast.Left){ inst=new int[3];inst[0]
-=Split;prog.Add(inst);var i=prog.Count; EmitPart(ast.Right,prog);inst[1]=i;inst[2]=prog.Count;return;}else{ inst=new int[3];inst[0]=Split;prog.Add(inst);
-inst[1]=prog.Count; EmitPart(ast.Left,prog); jmp=new int[2];jmp[0]=Jmp;prog.Add(jmp);inst[2]=prog.Count; EmitPart(ast.Right,prog);jmp[1]=prog.Count;}break;
-case Ast.NSet:case Ast.Set: inst=new int[ast.Ranges.Length+1];inst[0]=(ast.Kind==Ast.Set)?Set:NSet;SortRanges(ast.Ranges);Array.Copy(ast.Ranges,0,inst,
-1,ast.Ranges.Length);prog.Add(inst);break;case Ast.NUCode:case Ast.UCode: inst=new int[2];inst[0]=(ast.Kind==Ast.UCode)?UCode:NUCode;inst[1]=ast.Value;
-prog.Add(inst);break;case Ast.Opt:if(null==ast.Left)return; inst=new int[3]; inst[0]=Split;prog.Add(inst);inst[1]=prog.Count; EmitPart(ast.Left,prog);
-inst[2]=prog.Count;if(ast.IsLazy){ var t=inst[1];inst[1]=inst[2];inst[2]=t;}break; case Ast.Star:ast.Min=0;ast.Max=0;goto case Ast.Rep;case Ast.Plus:ast.Min
-=1;ast.Max=0;goto case Ast.Rep;case Ast.Rep: if(ast.Min>0&&ast.Max>0&&ast.Min>ast.Max)throw new ArgumentOutOfRangeException("Max");if(null==ast.Left)return;
-int idx;Ast opt;Ast rep;switch(ast.Min){case-1:case 0:switch(ast.Max){ case-1:case 0:idx=prog.Count;inst=new int[3];inst[0]=Split;prog.Add(inst);inst[1]
-=prog.Count;EmitPart(ast.Left,prog);jmp=new int[2];jmp[0]=Jmp;jmp[1]=idx;prog.Add(jmp);inst[2]=prog.Count;if(ast.IsLazy){ var t=inst[1];inst[1]=inst[2];
-inst[2]=t;}return; case 1:opt=new Ast();opt.Kind=Ast.Opt;opt.Left=ast.Left;opt.IsLazy=ast.IsLazy;EmitPart(opt,prog);return;default: opt=new Ast();opt.Kind
-=Ast.Opt;opt.Left=ast.Left;opt.IsLazy=ast.IsLazy;EmitPart(opt,prog);for(var i=1;i<ast.Max;++i){EmitPart(opt,prog);}return;}case 1:switch(ast.Max){ case
--1:case 0:idx=prog.Count;EmitPart(ast.Left,prog);inst=new int[3];inst[0]=Split;prog.Add(inst);inst[1]=idx;inst[2]=prog.Count;if(ast.IsLazy){ var t=inst[1];
-inst[1]=inst[2];inst[2]=t;}return;case 1: EmitPart(ast.Left,prog);return;default: rep=new Ast();rep.Min=0;rep.Max=ast.Max-1;rep.IsLazy=ast.IsLazy;rep.Left
-=ast.Left;EmitPart(ast.Left,prog);EmitPart(rep,prog);return;}default: switch(ast.Max){ case-1:case 0:for(var i=0;i<ast.Min;++i)EmitPart(ast.Left,prog);
-rep=new Ast();rep.Kind=Ast.Star;rep.Left=ast.Left;rep.IsLazy=ast.IsLazy;EmitPart(rep,prog);return;case 1: throw new NotImplementedException();default:
- for(var i=0;i<ast.Min;++i)EmitPart(ast.Left,prog);if(ast.Min==ast.Max)return;opt=new Ast();opt.Kind=Ast.Opt;opt.Left=ast.Left;opt.IsLazy=ast.IsLazy;rep
-=new Ast();rep.Kind=Ast.Rep;rep.Min=rep.Max=ast.Max-ast.Min;EmitPart(rep,prog);return;}} throw new NotImplementedException();}}static string _FmtLbl(int
+EmitPart(ast.Left,prog);if(null!=ast.Right)EmitPart(ast.Right,prog);break;case Ast.Dot: inst=new int[1];inst[0]=Any;break;case Ast.Alt: if(null==ast.Right)
+{if(null==ast.Left){ return;} inst=new int[3];inst[0]=Split;prog.Add(inst);var i=prog.Count;EmitPart(ast.Left,prog);inst[1]=i;inst[2]=prog.Count;return;
+}if(null==ast.Left){ inst=new int[3];inst[0]=Split;prog.Add(inst);var i=prog.Count; EmitPart(ast.Right,prog);inst[1]=i;inst[2]=prog.Count;return;}else
+{ inst=new int[3];inst[0]=Split;prog.Add(inst);inst[1]=prog.Count; EmitPart(ast.Left,prog); jmp=new int[2];jmp[0]=Jmp;prog.Add(jmp);inst[2]=prog.Count;
+ EmitPart(ast.Right,prog);jmp[1]=prog.Count;}break;case Ast.NSet:case Ast.Set: inst=new int[ast.Ranges.Length+1];inst[0]=(ast.Kind==Ast.Set)?Set:NSet;
+SortRanges(ast.Ranges);Array.Copy(ast.Ranges,0,inst,1,ast.Ranges.Length);prog.Add(inst);break;case Ast.NUCode:case Ast.UCode: inst=new int[2];inst[0]=
+(ast.Kind==Ast.UCode)?UCode:NUCode;inst[1]=ast.Value;prog.Add(inst);break;case Ast.Opt:if(null==ast.Left)return; inst=new int[3]; inst[0]=Split;prog.Add(inst);
+inst[1]=prog.Count; EmitPart(ast.Left,prog);inst[2]=prog.Count;if(ast.IsLazy){ var t=inst[1];inst[1]=inst[2];inst[2]=t;}break; case Ast.Star:ast.Min=0;
+ast.Max=0;goto case Ast.Rep;case Ast.Plus:ast.Min=1;ast.Max=0;goto case Ast.Rep;case Ast.Rep: if(ast.Min>0&&ast.Max>0&&ast.Min>ast.Max)throw new ArgumentOutOfRangeException("Max");
+if(null==ast.Left)return;int idx;Ast opt;Ast rep;switch(ast.Min){case-1:case 0:switch(ast.Max){ case-1:case 0:idx=prog.Count;inst=new int[3];inst[0]=Split;
+prog.Add(inst);inst[1]=prog.Count;EmitPart(ast.Left,prog);jmp=new int[2];jmp[0]=Jmp;jmp[1]=idx;prog.Add(jmp);inst[2]=prog.Count;if(ast.IsLazy){ var t=
+inst[1];inst[1]=inst[2];inst[2]=t;}return; case 1:opt=new Ast();opt.Kind=Ast.Opt;opt.Left=ast.Left;opt.IsLazy=ast.IsLazy;EmitPart(opt,prog);return;default:
+ opt=new Ast();opt.Kind=Ast.Opt;opt.Left=ast.Left;opt.IsLazy=ast.IsLazy;EmitPart(opt,prog);for(var i=1;i<ast.Max;++i){EmitPart(opt,prog);}return;}case
+ 1:switch(ast.Max){ case-1:case 0:idx=prog.Count;EmitPart(ast.Left,prog);inst=new int[3];inst[0]=Split;prog.Add(inst);inst[1]=idx;inst[2]=prog.Count;if
+(ast.IsLazy){ var t=inst[1];inst[1]=inst[2];inst[2]=t;}return;case 1: EmitPart(ast.Left,prog);return;default: rep=new Ast();rep.Min=0;rep.Max=ast.Max-1;
+rep.IsLazy=ast.IsLazy;rep.Left=ast.Left;EmitPart(ast.Left,prog);EmitPart(rep,prog);return;}default: switch(ast.Max){ case-1:case 0:for(var i=0;i<ast.Min;
+++i)EmitPart(ast.Left,prog);rep=new Ast();rep.Kind=Ast.Star;rep.Left=ast.Left;rep.IsLazy=ast.IsLazy;EmitPart(rep,prog);return;case 1: throw new NotImplementedException();
+default: for(var i=0;i<ast.Min;++i)EmitPart(ast.Left,prog);if(ast.Min==ast.Max)return;opt=new Ast();opt.Kind=Ast.Opt;opt.Left=ast.Left;opt.IsLazy=ast.IsLazy;
+rep=new Ast();rep.Kind=Ast.Rep;rep.Min=rep.Max=ast.Max-ast.Min;EmitPart(rep,prog);return;}} throw new NotImplementedException();}}static string _FmtLbl(int
  i){return string.Format("L{0,4:000#}",i);}public static string ToString(IEnumerable<int[]>prog){var sb=new StringBuilder();var i=0;foreach(var inst in
  prog){sb.Append(_FmtLbl(i));sb.Append(": ");sb.AppendLine(ToString(inst));++i;}return sb.ToString();}static string _ToStr(char ch){return string.Concat('\"',
 _EscChar(ch),'\"');}static string _EscChar(char ch){switch(ch){case'.':case'/': case'(':case')':case'[':case']':case'<': case'>':case'|':case';': case

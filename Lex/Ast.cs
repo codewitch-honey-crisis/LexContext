@@ -20,6 +20,7 @@ namespace L
 		public const int Rep = 10;
 		public const int UCode = 11;
 		public const int NUCode = 12;
+		internal const int Dot = 13;
 		#endregion Kinds
 
 		public int Kind = None;
@@ -42,17 +43,16 @@ namespace L
 					case -1:
 						return result;
 					case '.':
-						var nset = new Ast();
-						nset.Kind = Ast.Set;
-						nset.Ranges = new int[] { char.MinValue, char.MaxValue };
+						var dot = new Ast();
+						dot.Kind = Ast.Dot;
 						if (null == result)
-							result = nset;
+							result = dot;
 						else
 						{
 							var cat = new Ast();
 							cat.Kind = Ast.Cat;
 							cat.Left = result;
-							cat.Right = nset;
+							cat.Right = dot;
 							result = cat;
 						}
 						pc.Advance();
@@ -279,7 +279,8 @@ namespace L
 						}
 						break;
 					case '[':
-						pc.ClearCapture();
+						var seti = _ParseSet(pc);
+						/*pc.ClearCapture();
 						pc.Advance();
 						pc.Expecting();
 						isNot = false;
@@ -294,9 +295,10 @@ namespace L
 						var ranges = _ParseRanges(pc);
 						pc.Expecting(']');
 						pc.Advance();
+						*/
 						next = new Ast();
-						next.Kind = (isNot)?NSet:Set;
-						next.Ranges = ranges;
+						next.Kind = (seti.Key)?NSet:Set;
+						next.Ranges = seti.Value;
 						next = _ParseModifier(next, pc);
 
 						if (null == result)
@@ -330,6 +332,125 @@ namespace L
 						break;
 				}
 			}
+		}
+		static KeyValuePair<bool, int[]> _ParseSet(LexContext pc)
+		{
+			var result = new List<int>();
+			pc.EnsureStarted();
+			pc.Expecting('[');
+			pc.Advance();
+			pc.Expecting();
+			var isNot = false;
+			if ('^' == pc.Current)
+			{
+				isNot = true;
+				pc.Advance();
+				pc.Expecting();
+			}
+			var firstRead = true;
+			int firstChar = '\0';
+			var readFirstChar = false;
+			var wantRange = false;
+			while (-1 != pc.Current && (firstRead || ']' != pc.Current))
+			{
+				if (!wantRange)
+				{
+					// can be a single char,
+					// a range
+					// or a named character class
+					if ('[' == pc.Current) // named char class
+					{
+						pc.Advance();
+						pc.Expecting();
+						if (':' != pc.Current)
+						{
+							firstChar = '[';
+							readFirstChar = true;
+						}
+						else
+						{
+							pc.Advance();
+							pc.Expecting();
+							var ll = pc.CaptureBuffer.Length;
+							if (!pc.TryReadUntil(':', false))
+								throw new ExpectingException("Expecting character class", pc.Line, pc.Column, pc.Position, pc.FileOrUrl);
+							pc.Expecting(':');
+							pc.Advance();
+							pc.Expecting(']');
+							pc.Advance();
+							var cls = pc.GetCapture(ll);
+							result.AddRange(Lex.GetCharacterClass(cls));
+
+						}
+					}
+					if (!readFirstChar)
+					{
+						if (char.IsHighSurrogate((char)pc.Current))
+						{
+							var chh = (char)pc.Current;
+							pc.Advance();
+							pc.Expecting();
+							firstChar = char.ConvertToUtf32(chh, (char)pc.Current);
+						}
+						else
+							firstChar = (char)pc.Current;
+						readFirstChar = true;
+						pc.Advance();
+						pc.Expecting();
+					}
+					else
+					{
+						if ('-' == pc.Current)
+						{
+							pc.Advance();
+							pc.Expecting();
+							wantRange = true;
+						}
+						else
+						{
+							result.Add(firstChar);
+							result.Add(firstChar);
+							readFirstChar = false;
+						}
+					}
+					firstRead = false;
+				}
+				else
+				{
+
+					var ch = 0;
+					if (char.IsHighSurrogate((char)pc.Current))
+					{
+						var chh = (char)pc.Current;
+						pc.Advance();
+						pc.Expecting();
+						ch = char.ConvertToUtf32(chh, (char)pc.Current);
+					}
+					else
+						ch = (char)pc.Current;
+					pc.Advance();
+					pc.Expecting();
+					result.Add(firstChar);
+					result.Add(ch);
+
+					wantRange = false;
+					readFirstChar = false;
+				}
+
+			}
+			if (readFirstChar)
+			{
+				result.Add(firstChar);
+				result.Add(firstChar);
+				if (wantRange)
+				{
+					result.Add('-');
+					result.Add('-');
+				}
+			}
+			pc.Expecting(']');
+			pc.Advance();
+			return new KeyValuePair<bool, int[]>(isNot, result.ToArray());
 		}
 		static int[] _ParseRanges(LexContext pc)
 		{

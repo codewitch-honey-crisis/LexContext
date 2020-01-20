@@ -13,9 +13,10 @@ namespace LexDemo
 	{
 		static void Main()
 		{
-			//Console.WriteLine(Lex.Disassemble(Lex.AssembleFrom(@"..\..\lexer.lasm")));
+			//Console.WriteLine(Lex.Disassemble(Lex.CompileRegexPart("[_[:IsLetter:]][_[:IsLetterOrDigit:]]*")));
 			_RunLexer();
 		}
+		
 		static void _RunLexer()
 		{
 
@@ -23,7 +24,7 @@ namespace LexDemo
 			var prog = Lex.CompileLexerRegex(
 				@"[A-Z_a-z][A-Z_a-z0-9]*", // id
 				@"0|(\-?[1-9][0-9]*)", // int
-				@"[ \t\r\n\v\f]" // space
+				@"( |\t|\r|\n|\v|\f)" // space
 			);
 			
 			// dump the program to the console

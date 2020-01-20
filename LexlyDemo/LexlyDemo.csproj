@@ -39,10 +39,12 @@
     <Compile Include="ExampleTokenizer.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SlangTokenizer.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
     <None Include="Example.lx" />
+    <None Include="Slang.lx" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\LexContext\LexContext.csproj">
@@ -56,6 +58,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PreBuildEvent>"$(SolutionDir)Lexly\bin\Release\Lexly.exe" "$(ProjectDir)Example.lx" /output "$(ProjectDir)ExampleTokenizer.cs" /namespace LexlyDemo</PreBuildEvent>
+    <PreBuildEvent>"$(SolutionDir)Lexly\bin\Release\Lexly.exe" "$(ProjectDir)Example.lx" /output "$(ProjectDir)ExampleTokenizer.cs" /namespace LexlyDemo
+"$(SolutionDir)Lexly\bin\Release\Lexly.exe" "$(ProjectDir)Slang.lx" /output "$(ProjectDir)SlangTokenizer.cs" /namespace LexlyDemo /noshared</PreBuildEvent>
   </PropertyGroup>
 </Project>

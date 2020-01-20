@@ -14,6 +14,17 @@ namespace L
 #endif
 	static class Lex
 	{
+		public static int[] GetCharacterClass(string name)
+		{
+			if (null == name)
+				throw new ArgumentNullException(nameof(name));
+			if (0 == name.Length)
+				throw new ArgumentException("The character class name must not be empty.", nameof(name));
+			int[] result;
+			if (!CharCls.CharacterClasses.TryGetValue(name, out result))
+				throw new ArgumentException("The character class " + name + " was not found", nameof(name));
+			return result;
+		}
 		/// <summary>
 		/// Assembles the assembly code into a program
 		/// </summary>
