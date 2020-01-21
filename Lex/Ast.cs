@@ -329,6 +329,12 @@ namespace L
 						break;
 					default:
 						ich = pc.Current;
+						if(char.IsHighSurrogate((char)ich))
+						{
+							if (-1 == pc.Advance())
+								throw new ExpectingException("Expecting low surrogate in Unicode stream", pc.Line, pc.Column, pc.Position, pc.FileOrUrl, "low-surrogate");
+							ich = char.ConvertToUtf32((char)ich, (char)pc.Current);
+						}
 						next = new Ast();
 						next.Kind = Ast.Lit;
 						next.Value = ich;

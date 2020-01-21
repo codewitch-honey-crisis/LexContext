@@ -28,9 +28,9 @@ namespace LexlyDemo
 
 			var tokenizer = new SlangTokenizer(text); // generated from Example.lx
 
-			Console.WriteLine("Disassembly:");
-			Console.WriteLine(Lex.Disassemble(SlangTokenizer.Program));
-			Console.WriteLine();
+			//Console.WriteLine("Disassembly:");
+			//Console.WriteLine(Lex.Disassemble(SlangTokenizer.Program));
+			//Console.WriteLine();
 			
 			foreach (var tok in tokenizer)
 			{

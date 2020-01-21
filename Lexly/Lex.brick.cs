@@ -106,13 +106,14 @@ next};result=cat;}break;case'|':if(-1!=pc.Advance()){next=Parse(pc);if(null!=res
 =new Ast[]{result,next};result=alt;}else{var exprs=new Ast[1+next.Exprs.Length];Array.Copy(next.Exprs,0,exprs,1,next.Exprs.Length);exprs[0]=result;alt.Exprs
 =exprs;result=alt;}}}else{var opt=new Ast();opt.Kind=Ast.Opt;opt.Exprs=new Ast[]{result};result=opt;}break;case'[':var seti=_ParseSet(pc);next=new Ast();
 next.Kind=(seti.Key)?NSet:Set;next.Ranges=seti.Value;next=_ParseModifier(next,pc);if(null==result)result=next;else{var cat=new Ast();cat.Kind=Ast.Cat;
-cat.Exprs=new Ast[]{result,next};result=cat;}break;default:ich=pc.Current;next=new Ast();next.Kind=Ast.Lit;next.Value=ich;pc.Advance();next=_ParseModifier(next,
-pc);if(null==result)result=next;else{var cat=new Ast();cat.Kind=Ast.Cat;cat.Exprs=new Ast[]{result,next};result=cat;}break;}}}static KeyValuePair<bool,
-int[]>_ParseSet(LexContext pc){var result=new List<int>();pc.EnsureStarted();pc.Expecting('[');pc.Advance();pc.Expecting();var isNot=false;if('^'==pc.Current)
-{isNot=true;pc.Advance();pc.Expecting();}var firstRead=true;int firstChar='\0';var readFirstChar=false;var wantRange=false;while(-1!=pc.Current&&(firstRead
-||']'!=pc.Current)){if(!wantRange){ if('['==pc.Current){pc.Advance();pc.Expecting();if(':'!=pc.Current){firstChar='[';readFirstChar=true;}else{pc.Advance();
-pc.Expecting();var ll=pc.CaptureBuffer.Length;if(!pc.TryReadUntil(':',false))throw new ExpectingException("Expecting character class",pc.Line,pc.Column,
-pc.Position,pc.FileOrUrl);pc.Expecting(':');pc.Advance();pc.Expecting(']');pc.Advance();var cls=pc.GetCapture(ll);result.AddRange(Lex.GetCharacterClass(cls));
+cat.Exprs=new Ast[]{result,next};result=cat;}break;default:ich=pc.Current;if(char.IsHighSurrogate((char)ich)){if(-1==pc.Advance())throw new ExpectingException("Expecting low surrogate in Unicode stream",
+pc.Line,pc.Column,pc.Position,pc.FileOrUrl,"low-surrogate");ich=char.ConvertToUtf32((char)ich,(char)pc.Current);}next=new Ast();next.Kind=Ast.Lit;next.Value
+=ich;pc.Advance();next=_ParseModifier(next,pc);if(null==result)result=next;else{var cat=new Ast();cat.Kind=Ast.Cat;cat.Exprs=new Ast[]{result,next};result
+=cat;}break;}}}static KeyValuePair<bool,int[]>_ParseSet(LexContext pc){var result=new List<int>();pc.EnsureStarted();pc.Expecting('[');pc.Advance();pc.Expecting();
+var isNot=false;if('^'==pc.Current){isNot=true;pc.Advance();pc.Expecting();}var firstRead=true;int firstChar='\0';var readFirstChar=false;var wantRange
+=false;while(-1!=pc.Current&&(firstRead||']'!=pc.Current)){if(!wantRange){ if('['==pc.Current){pc.Advance();pc.Expecting();if(':'!=pc.Current){firstChar
+='[';readFirstChar=true;}else{pc.Advance();pc.Expecting();var ll=pc.CaptureBuffer.Length;if(!pc.TryReadUntil(':',false))throw new ExpectingException("Expecting character class",
+pc.Line,pc.Column,pc.Position,pc.FileOrUrl);pc.Expecting(':');pc.Advance();pc.Expecting(']');pc.Advance();var cls=pc.GetCapture(ll);result.AddRange(Lex.GetCharacterClass(cls));
 readFirstChar=false;wantRange=false;firstRead=false;continue;}}if(!readFirstChar){if(char.IsHighSurrogate((char)pc.Current)){var chh=(char)pc.Current;
 pc.Advance();pc.Expecting();firstChar=char.ConvertToUtf32(chh,(char)pc.Current);pc.Advance();pc.Expecting();}else if('\\'==pc.Current){pc.Advance();firstChar
 =_ParseRangeEscapePart(pc);}else{firstChar=pc.Current;pc.Advance();pc.Expecting();}readFirstChar=true;}else{if('-'==pc.Current){pc.Advance();pc.Expecting();
@@ -1000,16 +1001,15 @@ new StringBuilder();if(Set==inst[0])sb.Append("set ");else sb.Append("nset ");fo
 case Any:return"any";case Match:return"match "+inst[1].ToString();case Save:return"save "+inst[1].ToString();default:throw new InvalidProgramException("The instruction is not valid");
 }}internal static int[][]EmitLexer(params Ast[]expressions){var parts=new KeyValuePair<int,int[][]>[expressions.Length];for(var i=0;i<expressions.Length;++i)
 {var l=new List<int[]>();EmitPart(expressions[i],l);parts[i]=new KeyValuePair<int,int[][]>(i,l.ToArray());}return EmitLexer(parts);}internal static int[][]
-EmitLexer(IEnumerable<KeyValuePair<int,int[][]>>parts){var l=new List<KeyValuePair<int,int[][]>>(parts);var prog=new List<int[]>();int[]match,save; var
- split=new int[l.Count+2];split[0]=Compiler.Split;prog.Add(split); for(int ic=l.Count,i=0;i<ic;++i){split[i+1]=prog.Count; save=new int[2];save[0]=Save;
-save[1]=0;prog.Add(save); Fixup(l[i].Value,prog.Count);prog.AddRange(l[i].Value); save=new int[2];save[0]=Save;save[1]=1;prog.Add(save); match=new int[2];
-match[0]=Match;match[1]=l[i].Key;prog.Add(match);} split[split.Length-1]=prog.Count; save=new int[2];save[0]=Save;save[1]=0;prog.Add(save); var any=new
- int[1];any[0]=Any;prog.Add(any); save=new int[2];save[0]=Save;save[1]=1;prog.Add(save); match=new int[2];match[0]=Match;match[1]=-1;prog.Add(match);return
- prog.ToArray();}internal static void SortRanges(int[]ranges){var result=new List<KeyValuePair<int,int>>(ranges.Length/2);for(var i=0;i<ranges.Length-
-1;++i){var ch=ranges[i];++i;result.Add(new KeyValuePair<int,int>(ch,ranges[i]));}result.Sort((x,y)=>{return x.Key.CompareTo(y.Key);});for(int ic=result.Count,
-i=0;i<ic;++i){var j=i*2;var kvp=result[i];ranges[j]=kvp.Key;ranges[j+1]=kvp.Value;}}internal static void Fixup(int[][]program,int offset){for(var i=0;i<program.Length;i++)
-{var inst=program[i];var op=inst[0];switch(op){case Jmp:inst[1]+=offset;break;case Split:for(var j=1;j<inst.Length;j++)inst[j]+=offset;break;}}}}}namespace
- L{/// <summary>
+EmitLexer(IEnumerable<KeyValuePair<int,int[][]>>parts){var l=new List<KeyValuePair<int,int[][]>>(parts);var prog=new List<int[]>();int[]match,save; save
+=new int[2];save[0]=Save;save[1]=0;prog.Add(save); var split=new int[l.Count+2];split[0]=Compiler.Split;prog.Add(split); for(int ic=l.Count,i=0;i<ic;++i)
+{split[i+1]=prog.Count; Fixup(l[i].Value,prog.Count);prog.AddRange(l[i].Value); save=new int[2];save[0]=Save;save[1]=1;prog.Add(save); match=new int[2];
+match[0]=Match;match[1]=l[i].Key;prog.Add(match);} split[split.Length-1]=prog.Count; var any=new int[1];any[0]=Any;prog.Add(any); save=new int[2];save[0]
+=Save;save[1]=1;prog.Add(save); match=new int[2];match[0]=Match;match[1]=-1;prog.Add(match);return prog.ToArray();}internal static void SortRanges(int[]
+ranges){var result=new List<KeyValuePair<int,int>>(ranges.Length/2);for(var i=0;i<ranges.Length-1;++i){var ch=ranges[i];++i;result.Add(new KeyValuePair<int,
+int>(ch,ranges[i]));}result.Sort((x,y)=>{return x.Key.CompareTo(y.Key);});for(int ic=result.Count,i=0;i<ic;++i){var j=i*2;var kvp=result[i];ranges[j]=
+kvp.Key;ranges[j+1]=kvp.Value;}}internal static void Fixup(int[][]program,int offset){for(var i=0;i<program.Length;i++){var inst=program[i];var op=inst[0];
+switch(op){case Jmp:inst[1]+=offset;break;case Split:for(var j=1;j<inst.Length;j++)inst[j]+=offset;break;}}}}}namespace L{/// <summary>
 /// Provides services for assembling and disassembling lexers, and for compiling regular expressions into lexers
 /// </summary>
 #if LLIB

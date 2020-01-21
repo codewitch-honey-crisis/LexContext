@@ -551,14 +551,14 @@ namespace LexlyDemo {
     internal partial class ExampleTokenizer : Tokenizer {
         internal static int[][] Program = new int[][] {
                 new int[] {
-                        3,
-                        1,
-                        8,
-                        20,
-                        24},
-                new int[] {
                         10,
                         0},
+                new int[] {
+                        3,
+                        2,
+                        8,
+                        19,
+                        22},
                 new int[] {
                         6,
                         65,
@@ -591,22 +591,19 @@ namespace LexlyDemo {
                         1,
                         0},
                 new int[] {
-                        10,
-                        0},
-                new int[] {
                         3,
-                        10,
-                        12},
+                        9,
+                        11},
                 new int[] {
                         5,
                         48},
                 new int[] {
                         2,
-                        18},
+                        17},
                 new int[] {
                         3,
-                        13,
-                        14},
+                        12,
+                        13},
                 new int[] {
                         5,
                         45},
@@ -616,24 +613,21 @@ namespace LexlyDemo {
                         57},
                 new int[] {
                         3,
-                        16,
-                        18},
+                        15,
+                        17},
                 new int[] {
                         6,
                         48,
                         57},
                 new int[] {
                         2,
-                        15},
+                        14},
                 new int[] {
                         10,
                         1},
                 new int[] {
                         1,
                         1},
-                new int[] {
-                        10,
-                        0},
                 new int[] {
                         6,
                         9,
@@ -654,9 +648,6 @@ namespace LexlyDemo {
                 new int[] {
                         1,
                         2},
-                new int[] {
-                        10,
-                        0},
                 new int[] {
                         4},
                 new int[] {

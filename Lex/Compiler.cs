@@ -468,6 +468,12 @@ namespace L
 			var l = new List<KeyValuePair<int, int[][]>>(parts);
 			var prog = new List<int[]>();
 			int[] match, save;
+			// save 0
+			save = new int[2];
+			save[0] = Save;
+			save[1] = 0;
+			prog.Add(save);
+
 			// generate the primary split instruction
 			var split = new int[l.Count+ 2];
 			split[0] = Compiler.Split;
@@ -478,11 +484,7 @@ namespace L
 			for (int ic=l.Count,i = 0; i < ic; ++i)
 			{
 				split[i + 1] = prog.Count;
-				// save 0
-				save = new int[2];
-				save[0] = Save;
-				save[1] = 0;
-				prog.Add(save);
+				
 				// expr
 				Fixup(l[i].Value, prog.Count);
 				prog.AddRange(l[i].Value);
@@ -500,11 +502,6 @@ namespace L
 			// generate the error condition
 			// handling
 			split[split.Length - 1] = prog.Count;
-			// save 0
-			save = new int[2];
-			save[0] = Save;
-			save[1] = 0;
-			prog.Add(save);
 			// any
 			var any = new int[1];
 			any[0] = Any;
