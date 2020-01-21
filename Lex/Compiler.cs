@@ -62,71 +62,63 @@ namespace L
 					prog.Add(inst);
 					break;
 				case Ast.Cat: // concatenation
-					if(null!=ast.Left)
-						EmitPart(ast.Left,prog);
-					if(null!=ast.Right)
-						EmitPart(ast.Right,prog);
+					for(var i = 0;i<ast.Exprs.Length;i++)
+						if(null!=ast.Exprs[i])
+							EmitPart(ast.Exprs[i],prog);
 					break;
 				case Ast.Dot: // dot/any
 					inst = new int[1];
 					inst[0] = Any;
 					break;
 				case Ast.Alt: // alternation
-					// first handle the cases where one
+					// be sure to handle the cases where one
 					// of the children is null such as
 					// in (foo|) or (|foo)
-					if (null == ast.Right)
+					var exprs = new List<Ast>(ast.Exprs.Length);
+					var firstNull = -1;
+					for (var i = 0; i < ast.Exprs.Length; ++i)
 					{
-						if (null == ast.Left)
+						if (null == ast.Exprs[i])
 						{
-							// both are null ex: (|) - do nothing
-							return;
+							if (0 > firstNull)
+							{
+								firstNull = i;
+								exprs.Add(null);
+							}
+							continue;
 						}
-						// we have to choose empty or Left
-						// split <i>, <<next>>
-						inst = new int[3];
-						inst[0] = Split;
-						prog.Add(inst);
-						var i = prog.Count;
-						EmitPart(ast.Left, prog);
-						inst[1] = i;
-						inst[2] = prog.Count;
-						return;
+						exprs.Add(ast.Exprs[i]);
 					}
-					if (null == ast.Left)
+					ast.Exprs = exprs.ToArray();
+					var split = new int[ast.Exprs.Length + 1];
+					split[0] = Split;
+					prog.Add(split);
+					var jmpfixes = new List<int>(ast.Exprs.Length - 1);
+					for(var i = 0;i<ast.Exprs.Length;++i)
 					{
-						// we have to choose empty or Right
-						// split <i>, <<next>>
-						inst = new int[3];
-						inst[0] = Split;
-						prog.Add(inst);
-						var i = prog.Count;
-						// emit the right part
-						EmitPart(ast.Right, prog);
-						inst[1] = i;
-						inst[2] = prog.Count;
-						return;
+						var e = ast.Exprs[i];
+						if(null!=e)
+						{
+							split[i + 1] = prog.Count;
+							EmitPart(e, prog);
+							if(i==ast.Exprs.Length-1)
+								continue;
+							if (i == ast.Exprs.Length - 2 && null == ast.Exprs[i + 1])
+								continue;
+							var j = new int[2];
+							j[0] = Jmp;
+							jmpfixes.Add(prog.Count);
+							prog.Add(j);
+						}
 					}
-					else // both Left and Right are filled ex: (foo|bar)
+					for(int ic=jmpfixes.Count,i=0;i<ic;++i)
 					{
-						// we have to choose/split between left and right
-						// split <pc>, <<next>>
-						inst = new int[3];
-						inst[0] = Split;
-						prog.Add(inst);
-						inst[1] = prog.Count;
-						// emit the left hand side
-						EmitPart(ast.Left, prog);
-						// we have to skip past the alternate
-						// that comes next, so we jump
-						// jmp <<next>>
-						jmp = new int[2];
-						jmp[0] = Jmp;
-						prog.Add(jmp);
-						inst[2]= prog.Count;
-						// emit the right hand side
-						EmitPart(ast.Right,prog);
-						jmp[1] = prog.Count;
+						var j = prog[jmpfixes[i]];
+						j[1] = prog.Count;
+					}
+					if(-1<firstNull)
+					{
+						split[firstNull + 1] = prog.Count;
 					}
 					break;
 				case Ast.NSet:
@@ -153,16 +145,16 @@ namespace L
 					prog.Add(inst);
 					break;
 				case Ast.Opt:
-					if (null == ast.Left)
-						return; // empty ex: ()? do nothing
 					inst = new int[3];
 					// we have to choose betweed Left or empty
 					// split <pc>, <<next>>
 					inst[0] = Split;
 					prog.Add(inst);
 					inst[1] = prog.Count;
-					// emit Left
-					EmitPart(ast.Left, prog);
+					// emit 
+					for (var i = 0; i < ast.Exprs.Length; i++)
+						if (null != ast.Exprs[i])
+							EmitPart(ast.Exprs[i], prog);
 					inst[2] = prog.Count;
 					if (ast.IsLazy)
 					{
@@ -192,8 +184,7 @@ namespace L
 					// this gets complicated
 					if (ast.Min > 0 && ast.Max > 0 && ast.Min > ast.Max)
 						throw new ArgumentOutOfRangeException("Max");
-					if (null == ast.Left)
-						return;
+					
 					int idx;
 					Ast opt;
 					Ast rep;
@@ -212,7 +203,9 @@ namespace L
 									inst[0] = Split;
 									prog.Add(inst);
 									inst[1] = prog.Count;
-									EmitPart(ast.Left, prog);
+									for (var i = 0; i < ast.Exprs.Length; i++)
+										if (null != ast.Exprs[i])
+											EmitPart(ast.Exprs[i], prog);
 									jmp = new int[2];
 									jmp[0] = Jmp;
 									jmp[1] = idx;
@@ -229,14 +222,14 @@ namespace L
 								case 1:
 									opt = new Ast();
 									opt.Kind = Ast.Opt;
-									opt.Left = ast.Left;
+									opt.Exprs = ast.Exprs;
 									opt.IsLazy = ast.IsLazy;
 									EmitPart(opt,prog);
 									return;
 								default: // ex: (foo){,10}
 									opt = new Ast();
 									opt.Kind = Ast.Opt;
-									opt.Left = ast.Left;
+									opt.Exprs = ast.Exprs;
 									opt.IsLazy = ast.IsLazy;
 									EmitPart(opt, prog);
 									for (var i = 1; i < ast.Max; ++i)
@@ -252,7 +245,9 @@ namespace L
 								case -1:
 								case 0:
 									idx = prog.Count;
-									EmitPart(ast.Left, prog);
+									for (var i = 0; i < ast.Exprs.Length; i++)
+										if (null != ast.Exprs[i])
+											EmitPart(ast.Exprs[i], prog);
 									inst = new int[3];
 									inst[0] = Split;
 									prog.Add(inst);
@@ -268,7 +263,9 @@ namespace L
 									return;
 								case 1:
 									// no repeat ex: (foo)
-									EmitPart(ast.Left, prog);
+									for (var i = 0; i < ast.Exprs.Length; i++)
+										if (null != ast.Exprs[i])
+											EmitPart(ast.Exprs[i], prog);
 									return;
 								default:
 									// repeat ex: (foo){1,10}
@@ -276,8 +273,10 @@ namespace L
 									rep.Min = 0;
 									rep.Max = ast.Max -1;
 									rep.IsLazy = ast.IsLazy;
-									rep.Left = ast.Left;
-									EmitPart(ast.Left, prog);
+									rep.Exprs = ast.Exprs;
+									for (var i = 0; i < ast.Exprs.Length; i++)
+										if (null != ast.Exprs[i])
+											EmitPart(ast.Exprs[i], prog);
 									EmitPart(rep, prog);
 									return;
 							}
@@ -287,11 +286,15 @@ namespace L
 								// repeat ex: (foo) {10,}
 								case -1:
 								case 0:
-									for (var i = 0; i < ast.Min; ++i)
-										EmitPart(ast.Left,prog);
+									for (var j = 0; j < ast.Min; ++j)
+									{
+										for (var i = 0; i < ast.Exprs.Length; i++)
+											if (null != ast.Exprs[i])
+												EmitPart(ast.Exprs[i], prog);
+									}
 									rep = new Ast();
 									rep.Kind = Ast.Star;
-									rep.Left = ast.Left;
+									rep.Exprs = ast.Exprs;
 									rep.IsLazy = ast.IsLazy;
 									EmitPart(rep,prog);
 									return;
@@ -299,13 +302,17 @@ namespace L
 									// should never get here
 									throw new NotImplementedException();
 								default: // repeat ex: (foo){10,12}
-									for (var i = 0; i < ast.Min; ++i)
-										EmitPart(ast.Left, prog);
+									for (var j = 0; j < ast.Min; ++j)
+									{
+										for (var i = 0; i < ast.Exprs.Length; i++)
+											if (null != ast.Exprs[i])
+												EmitPart(ast.Exprs[i], prog);
+									}
 									if (ast.Min== ast.Max)
 										return;
 									opt = new Ast();
 									opt.Kind = Ast.Opt;
-									opt.Left = ast.Left;
+									opt.Exprs = ast.Exprs;
 									opt.IsLazy = ast.IsLazy;
 									rep = new Ast();
 									rep.Kind = Ast.Rep;

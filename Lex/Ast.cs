@@ -25,8 +25,8 @@ namespace L
 
 		public int Kind = None;
 		public bool IsLazy = false;
-		public Ast Left = null;
-		public Ast Right = null;
+		public Ast[] Exprs = null;
+		
 		public int Value = '\0';
 		public int[] Ranges;
 		public int Min = 0;
@@ -51,8 +51,7 @@ namespace L
 						{
 							var cat = new Ast();
 							cat.Kind = Ast.Cat;
-							cat.Left = result;
-							cat.Right = dot;
+							cat.Exprs = new Ast[] { result, dot };
 							result = cat;
 						}
 						pc.Advance();
@@ -233,8 +232,7 @@ namespace L
 						{
 							var cat = new Ast();
 							cat.Kind = Ast.Cat;
-							cat.Left = result;
-							cat.Right = next;
+							cat.Exprs = new Ast[] { result, next };
 							result = cat;
 						}
 						else
@@ -255,8 +253,7 @@ namespace L
 						{
 							var cat = new Ast();
 							cat.Kind = Ast.Cat;
-							cat.Left = result;
-							cat.Right = next;
+							cat.Exprs = new Ast[] { result, next };
 							result = cat;
 						}
 						break;
@@ -264,14 +261,14 @@ namespace L
 						if (-1 != pc.Advance())
 						{
 							next = Parse(pc);
-							if (Ast.Lit == result.Kind && Ast.Lit == next.Kind)
+							if (null!=result && Ast.Lit == result.Kind && Ast.Lit == next.Kind)
 							{
 								var set = new Ast();
 								set.Kind = Set;
 								set.Ranges = new int[] { result.Value, result.Value, next.Value, next.Value };
 								result = set;
 							}
-							else if (Ast.Lit == result.Kind && Ast.Set == next.Kind)
+							else if (null != result && Ast.Lit == result.Kind && Ast.Set == next.Kind)
 							{
 								var set = new Ast();
 								set.Kind = Ast.Set;
@@ -280,19 +277,35 @@ namespace L
 								set.Ranges[1] = result.Value;
 								Array.Copy(next.Ranges, 0, set.Ranges, 2, next.Ranges.Length);
 								result = set;
-							} else { 
+							} else if(null!=result && Ast.Alt==result.Kind)
+							{
+								var exprs = new Ast[result.Exprs.Length + 1];
+								Array.Copy(result.Exprs, 0, exprs, 0, result.Exprs.Length);
+								exprs[exprs.Length - 1] = next;
+								result.Exprs = exprs;
+							}
+							else { 
 								var alt = new Ast();
 								alt.Kind = Ast.Alt;
-								alt.Left = result;
-								alt.Right = next;
-								result = alt;
+								if (null == next || next.Kind != Alt)
+								{
+									alt.Exprs = new Ast[] { result, next };
+									result = alt;
+								} else
+								{
+									var exprs = new Ast[1 + next.Exprs.Length];
+									Array.Copy(next.Exprs, 0, exprs, 1, next.Exprs.Length);
+									exprs[0] = result;
+									alt.Exprs = exprs;
+									result = alt;
+								}
 							}
 						}
 						else
 						{
 							var opt = new Ast();
 							opt.Kind = Ast.Opt;
-							opt.Left = result;
+							opt.Exprs = new Ast[] { result };
 							result = opt;
 						}
 						break;
@@ -310,8 +323,7 @@ namespace L
 						{
 							var cat= new Ast();
 							cat.Kind = Ast.Cat;
-							cat.Left = result;
-							cat.Right = next;
+							cat.Exprs = new Ast[] { result, next };
 							result = cat;
 						}
 						break;
@@ -328,8 +340,7 @@ namespace L
 						{
 							var cat = new Ast();
 							cat.Kind = Ast.Cat;
-							cat.Left = result;
-							cat.Right = next;
+							cat.Exprs = new Ast[] { result, next };
 							result = cat;
 						}
 						break;
@@ -658,7 +669,7 @@ namespace L
 				case '*':
 					var rep = new Ast();
 					rep.Kind = Ast.Star;
-					rep.Left = expr;
+					rep.Exprs = new Ast[] { expr };
 					expr = rep;
 					pc.Advance();
 					if ('?' == pc.Current)
@@ -670,7 +681,7 @@ namespace L
 				case '+':
 					rep = new Ast();
 					rep.Kind = Ast.Plus;
-					rep.Left = expr;
+					rep.Exprs = new Ast[] { expr };
 					expr = rep;
 					pc.Advance();
 					if ('?' == pc.Current)
@@ -682,7 +693,7 @@ namespace L
 				case '?':
 					var opt = new Ast();
 					opt.Kind = Ast.Opt;
-					opt.Left = expr;
+					opt.Exprs = new Ast[] { expr };
 					expr = opt;
 					pc.Advance();
 					if ('?' == pc.Current)
@@ -721,7 +732,7 @@ namespace L
 					pc.Expecting('}');
 					pc.Advance();
 					rep = new Ast();
-					rep.Left = expr;
+					rep.Exprs = new Ast[] { expr };
 					rep.Kind = Ast.Rep;
 					rep.Min = min;
 					rep.Max = max;

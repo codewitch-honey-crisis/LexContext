@@ -8,16 +8,9 @@ namespace LexDemo
 	{
 		static void Main()
 		{
-			
-			var test = @"""([^""]|\\[\\'""abfnrtv0])*""";
-			test = @"(_|[[:IsLetterOrDigit:]])";
-			var cc = Lex.GetCharacterClass("IsLetterOrDigit");
-			var pi= Array.IndexOf(cc, '(');
-			Console.WriteLine("Has paren" + (-1 < pi));
-			Console.WriteLine("Test: " + test);
-			Console.WriteLine(Lex.Disassemble(Lex.CompileRegexPart(test)));
-			Console.WriteLine("Matches paren = "+Lex.IsMatch(Lex.CompileLexerRegex(test), LexContext.Create("(")));
-			//_RunLexer();
+			//var prog = Lex.CompileRegexPart("foo|bar||baz");
+			//Console.WriteLine(Lex.Disassemble(prog));
+			_RunLexer();
 		}
 		
 		static void _RunLexer()
@@ -33,8 +26,8 @@ namespace LexDemo
 			// dump the program to the console
 			Console.WriteLine(Lex.Disassemble(prog));
 
-			// our test data
-			var text = "foo 123 bar";//"fubar bar 123 1foo bar -243 @#*! 0";
+			// our test data - 14 tokens. 29 length
+			var text = "fubar bar 123 1foo bar -243 0";
 			Console.WriteLine("Lex: " + text);
 
 			// spin up a lexer context
