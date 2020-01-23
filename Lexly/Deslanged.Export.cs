@@ -241,11 +241,10 @@ internal partial class Deslanged {
                                         Deslanged._MemberField(new CodeTypeReference(typeof(int)), "_Match", new CodePrimitiveExpression(1), MemberAttributes.Const, new CodeCommentStatement[0], new CodeAttributeDeclaration[0], new CodeDirective[] {
                                                     new CodeRegionDirective(CodeRegionMode.Start, "Opcodes")}, new CodeDirective[0], null),
                                         Deslanged._MemberField(new CodeTypeReference(typeof(int)), "_Jmp", new CodePrimitiveExpression(2), MemberAttributes.Const, new CodeCommentStatement[] {
-                                                    new CodeCommentStatement(" match symbol")}, new CodeAttributeDeclaration[0], new CodeDirective[0], new CodeDirective[0], null),
-                                        Deslanged._MemberField(new CodeTypeReference(typeof(int)), "_Split", new CodePrimitiveExpression(3), MemberAttributes.Const, new CodeCommentStatement[] {
-                                                    new CodeCommentStatement(" jmp addr")}, new CodeAttributeDeclaration[0], new CodeDirective[0], new CodeDirective[0], null),
+                                                    new CodeCommentStatement(" match symbol"),
+                                                    new CodeCommentStatement("const int _Jmp = 2; // jmp addr")}, new CodeAttributeDeclaration[0], new CodeDirective[0], new CodeDirective[0], null),
                                         Deslanged._MemberField(new CodeTypeReference(typeof(int)), "_Any", new CodePrimitiveExpression(4), MemberAttributes.Const, new CodeCommentStatement[] {
-                                                    new CodeCommentStatement(" split addr1, addr2")}, new CodeAttributeDeclaration[0], new CodeDirective[0], new CodeDirective[0], null),
+                                                    new CodeCommentStatement(" jmp addr1 {, addrN }")}, new CodeAttributeDeclaration[0], new CodeDirective[0], new CodeDirective[0], null),
                                         Deslanged._MemberField(new CodeTypeReference(typeof(int)), "_Char", new CodePrimitiveExpression(5), MemberAttributes.Const, new CodeCommentStatement[] {
                                                     new CodeCommentStatement(" any")}, new CodeAttributeDeclaration[0], new CodeDirective[0], new CodeDirective[0], null),
                                         Deslanged._MemberField(new CodeTypeReference(typeof(int)), "_Set", new CodePrimitiveExpression(6), MemberAttributes.Const, new CodeCommentStatement[] {
@@ -467,17 +466,6 @@ internal partial class Deslanged {
                                                     new CodeVariableDeclarationStatement(new CodeTypeReference(typeof(int)), "op", new CodeArrayIndexerExpression(new CodeVariableReferenceExpression("pc"), new CodeExpression[] {
                                                                     new CodePrimitiveExpression(0)})),
                                                     new CodeConditionStatement(new CodeBinaryOperatorExpression(new CodeFieldReferenceExpression(new CodeTypeReferenceExpression(new CodeTypeReference("Lexly.TokenizerEnumerator")), "_Jmp"), CodeBinaryOperatorType.ValueEquality, new CodeVariableReferenceExpression("op")), new CodeStatement[] {
-                                                                new CodeExpressionStatement(new CodeMethodInvokeExpression(new CodeMethodReferenceExpression(new CodeTypeReferenceExpression(new CodeTypeReference("Lexly.TokenizerEnumerator")), "_EnqueueFiber"), new CodeExpression[] {
-                                                                                new CodeDirectionExpression(FieldDirection.Ref, new CodeArgumentReferenceExpression("lcount")),
-                                                                                new CodeDirectionExpression(FieldDirection.Ref, new CodeArgumentReferenceExpression("l")),
-                                                                                new CodeObjectCreateExpression(new CodeTypeReference("TokenizerFiber"), new CodeExpression[] {
-                                                                                            new CodeArgumentReferenceExpression("t"),
-                                                                                            new CodeArrayIndexerExpression(new CodeVariableReferenceExpression("pc"), new CodeExpression[] {
-                                                                                                        new CodePrimitiveExpression(1)}),
-                                                                                            new CodeFieldReferenceExpression(new CodeArgumentReferenceExpression("t"), "Saved")}),
-                                                                                new CodeArgumentReferenceExpression("sp")})),
-                                                                new CodeMethodReturnStatement(null)}, new CodeStatement[0]),
-                                                    new CodeConditionStatement(new CodeBinaryOperatorExpression(new CodeFieldReferenceExpression(new CodeTypeReferenceExpression(new CodeTypeReference("Lexly.TokenizerEnumerator")), "_Split"), CodeBinaryOperatorType.ValueEquality, new CodeVariableReferenceExpression("op")), new CodeStatement[] {
                                                                 new CodeIterationStatement(new CodeVariableDeclarationStatement(new CodeTypeReference(typeof(int)), "j", new CodePrimitiveExpression(1)), new CodeBinaryOperatorExpression(new CodeVariableReferenceExpression("j"), CodeBinaryOperatorType.LessThan, new CodePropertyReferenceExpression(new CodeVariableReferenceExpression("pc"), "Length")), new CodeAssignStatement(new CodeVariableReferenceExpression("j"), new CodeBinaryOperatorExpression(new CodeVariableReferenceExpression("j"), CodeBinaryOperatorType.Add, new CodePrimitiveExpression(1))), new CodeStatement[] {
                                                                             new CodeExpressionStatement(new CodeMethodInvokeExpression(new CodeMethodReferenceExpression(new CodeTypeReferenceExpression(new CodeTypeReference("Lexly.TokenizerEnumerator")), "_EnqueueFiber"), new CodeExpression[] {
                                                                                             new CodeDirectionExpression(FieldDirection.Ref, new CodeArgumentReferenceExpression("lcount")),

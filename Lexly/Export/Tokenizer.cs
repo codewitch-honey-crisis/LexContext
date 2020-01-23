@@ -54,8 +54,8 @@ namespace Lexly
 		private const int _EosSymbol = -2;
 		#region Opcodes
 		const int _Match = 1; // match symbol
-		const int _Jmp = 2; // jmp addr
-		const int _Split = 3; // split addr1, addr2
+		//const int _Jmp = 2; // jmp addr
+		const int _Jmp = 2; // jmp addr1 {, addrN }
 		const int _Any = 4; // any
 		const int _Char = 5; // char ch
 		const int _Set = 6; // set packedRange1Left,packedRange1Right,packedRange2Left,packedRange2Right...
@@ -306,12 +306,7 @@ namespace Lexly
 			++lcount;
 			var pc = t.Program[t.Index];
 			var op = pc[0];
-			if (_Jmp == op)
-			{
-				_EnqueueFiber(ref lcount, ref l, new TokenizerFiber(t, pc[1], t.Saved), sp);
-				return;
-			} 
-			if(_Split==op)
+			if(_Jmp==op)
 			{
 				for (var j = 1; j < pc.Length; ++j)
 					_EnqueueFiber(ref lcount, ref l, new TokenizerFiber(t.Program, pc[j], t.Saved), sp);

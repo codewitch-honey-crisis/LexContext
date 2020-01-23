@@ -55,6 +55,39 @@ namespace L
 						break;
 					case Inst.Label:
 						break;
+					case Inst.Switch:
+						var sw = new List<int>();
+						if(0==inst.Cases.Length)
+						{
+							if (0 == inst.Labels.Length)
+								break;
+							sw.Add(Inst.Jmp);
+						} else
+							sw.Add(inst.Opcode);
+						for(var k=0;k<inst.Cases.Length;k++)
+						{
+							var c = inst.Cases[k];
+							sw.AddRange(c.Key);
+							sw.Add(-1);
+							var lbl = c.Value;
+							if (!lmap.TryGetValue(lbl, out dst))
+								throw new InvalidProgramException("Switch references undefined label " + inst.Name + " at line " + inst.Line.ToString());
+							sw.Add(dst);
+						}
+						if (0 < inst.Cases.Length && (null!=inst.Labels && 0<inst.Labels.Length))
+							sw.Add(-2);
+						if (null != inst.Labels)
+						{
+							for (var j = 0; j < inst.Labels.Length; j++)
+							{
+								var lbl = inst.Labels[j];
+								if (!lmap.TryGetValue(lbl, out dst))
+									throw new InvalidProgramException("Switch references undefined label " + inst.Name + " at line " + inst.Line.ToString());
+								sw.Add(dst);
+							}
+						}
+						code = sw.ToArray();
+						break;
 					case Inst.Any:
 						code = new int[1];
 						code[0] = inst.Opcode;
@@ -76,24 +109,24 @@ namespace L
 						set.AddRange(inst.Ranges);
 						code = set.ToArray();
 						break;
-					case Inst.Jmp:
+					/*case Inst.Jmp:
 						code = new int[2];
 						code[0] = inst.Opcode;
 						if (!lmap.TryGetValue(inst.Name, out dst))
 							throw new InvalidProgramException("Jmp references undefined label " + inst.Name + " at line " + inst.Line.ToString());
 						code[1] = dst;
-						break;
-					case Inst.Split:
-						var split = new List<int>(inst.Labels.Length + 1);
-						split.Add(inst.Opcode);
+						break;*/
+					case Inst.Jmp:
+						var jmp = new List<int>(inst.Labels.Length + 1);
+						jmp.Add(inst.Opcode);
 						for(var j = 0;j<inst.Labels.Length;j++)
 						{
 							var lbl = inst.Labels[j];
 							if (!lmap.TryGetValue(lbl, out dst))
-								throw new InvalidProgramException("Split references undefined label " + inst.Name + " at line " + inst.Line.ToString());
-							split.Add(dst);
+								throw new InvalidProgramException("Jmp references undefined label " + inst.Name + " at line " + inst.Line.ToString());
+							jmp.Add(dst);
 						}
-						code = split.ToArray();
+						code = jmp.ToArray();
 						break;
 				}
 				if(null!=code)
@@ -112,8 +145,8 @@ namespace L
 		internal const int Regex = -2; // regex (expression) - a macro for a regular expression - will be replaced by the machine code represented by the the expression
 		internal const int Label = -1; // label: (not a "real" instruction, just a marker we use to fill in addresses after the parse)
 		internal const int Match = 1; // match symbol
-		internal const int Jmp = 2; // jmp addr
-		internal const int Split = 3; // split addr1, addr2
+		internal const int Jmp = 2; // jmp addr1 { , addrN }
+		internal const int Switch = 3; // switch case <ranges>:label1 case <ranges>:label2 default:label3 {, labelN }
 		internal const int Any = 4; // any
 		internal const int Char = 5; // char ch
 		internal const int Set = 6; // set packedRange1Left,packedRange1Right,packedRange2Left,packedRange2Right...
@@ -126,6 +159,7 @@ namespace L
 		// the meaning of these depends on the opcode
 		public int[] Ranges;
 		public string[] Labels;
+		public KeyValuePair<int[],string>[] Cases;
 		public int Value;
 		public string Name;
 		public int Line;
@@ -169,17 +203,23 @@ namespace L
 					result.Value = i;
 					_SkipToNextInstruction(input);
 					break;
-				case "jmp":
+				/*case "jmp":
 					_SkipWhiteSpace(input);
 					var lbl = _ParseIdentifier(input);
 					result.Opcode = Jmp;
 					result.Name = lbl;
 					_SkipToNextInstruction(input);
-					break;
-				case "split":
+					break;*/
+				case "jmp":
 					_SkipWhiteSpace(input);
-					result.Opcode = Split;
+					result.Opcode = Jmp;
 					result.Labels = _ParseLabels(input);
+					_SkipToNextInstruction(input);
+					break;
+				case "switch":
+					_SkipWhiteSpace(input);
+					result.Opcode = Switch;
+					_ParseCases(result,input);
 					_SkipToNextInstruction(input);
 					break;
 				case "any":
@@ -236,7 +276,7 @@ namespace L
 					break;
 				default:
 					if (':' != input.Current)
-						throw new ExpectingException("Expecting instruction or label", l, c, p, input.FileOrUrl, "match", "jmp", "split", "any", "char", "set", "nset", "ucode", "nucode", "save", "label");
+						throw new ExpectingException("Expecting instruction or label", l, c, p, input.FileOrUrl, "match", "jmp", "jmp", "any", "char", "set", "nset", "ucode", "nucode", "save", "label");
 					input.Advance();
 					result.Opcode = Label;
 					result.Name = id;
@@ -306,7 +346,7 @@ namespace L
 			if ('.' !=l.Current)
 			{
 				_SkipWhiteSpace(l);
-				l.Expecting(',', '\n', -1);
+				l.Expecting(',', '\n',';',':', -1);
 				_SkipWhiteSpace(l);
 				return new KeyValuePair<int, int>(first, first);
 			} 
@@ -315,14 +355,15 @@ namespace L
 			l.Advance();
 			var last = _ParseChar(l);
 			_SkipWhiteSpace(l);
-			l.Expecting(',', '\n', -1);
+			l.Expecting(',', ';',':','\n', -1);
 			_SkipWhiteSpace(l);
 			return new KeyValuePair<int, int>(first, last);
 		}
 		static int[] _ParseRanges(LexContext l)
 		{
+			_SkipWhiteSpace(l);
 			var result = new List<int>();
-			while(-1!=l.Current && '\n'!=l.Current)
+			while(-1!=l.Current && '\n'!=l.Current && ':'!=l.Current)
 			{
 				_SkipWhiteSpace(l);
 				var kvp = _ParseRange(l);
@@ -334,11 +375,54 @@ namespace L
 			result.Sort();
 			return result.ToArray();
 		}
+		static void _ParseCases(Inst result, LexContext l)
+		{
+			var cases = new List<KeyValuePair<int[], string>>();
+			while (-1 != l.Current && '\n' != l.Current && ';' != l.Current)
+			{
+				_SkipWhiteSpace(l);
+				var line = l.Line;
+				var column = l.Column;
+				var position = l.Position;
+				string s;
+				if ("case" != (s = _ParseIdentifier(l)) && "default" != s)
+					throw new ExpectingException("Expecting case or default", line, column, position, l.FileOrUrl, "case", "default");
+				_SkipWhiteSpace(l);
+				if ("case" == s)
+				{
+					var ranges = _ParseRanges(l);
+					_SkipWhiteSpace(l);
+					l.Expecting(':');
+					l.Advance();
+					l.Expecting();
+					var dst = _ParseIdentifier(l);
+					cases.Add(new KeyValuePair<int[], string>(ranges, dst));
+					if(','==l.Current)
+					{
+						l.Advance();
+					}
+				}
+				else // default
+				{
+					_SkipWhiteSpace(l);
+					l.Expecting(':');
+					l.Advance();
+					l.Expecting();
+					result.Labels = _ParseLabels(l);
+					break;
+				}
+				_SkipWhiteSpace(l);
+			}
+			result.Cases = cases.ToArray();
+			_SkipWhiteSpace(l);
+		}
 		static string[] _ParseLabels(LexContext l)
 		{
+			_SkipWhiteSpace(l);
 			var result = new List<string>();
-			while (-1 != l.Current && '\n' != l.Current)
-			{ 
+			while (-1 != l.Current && ';'!=l.Current && '\n' != l.Current)
+			{
+				_SkipWhiteSpace(l);
 				var name = _ParseIdentifier(l);
 				_SkipWhiteSpace(l);
 				result.Add(name);

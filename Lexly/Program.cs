@@ -32,6 +32,7 @@ namespace Lexly
 			string codenamespace = null;
 			bool noshared = false;
 			bool ifstale = false;
+			string graphfile = null;
 			// our working variables
 			TextReader input = null;
 			TextWriter output = null;
@@ -77,6 +78,12 @@ namespace Lexly
 									throw new ArgumentException(string.Format("The parameter \"{0}\" is missing an argument", args[i].Substring(1)));
 								++i; // advance 
 								codenamespace = args[i];
+								break;
+							case "/graph":
+								if (args.Length - 1 == i) // check if we're at the end
+									throw new ArgumentException(string.Format("The parameter \"{0}\" is missing an argument", args[i].Substring(1)));
+								++i; // advance 
+								graphfile= args[i];
 								break;
 							case "/noshared":
 								noshared = true;
@@ -130,6 +137,7 @@ namespace Lexly
 						var rules = _ParseRules(input);
 						input.Close();
 						input = null;
+						
 						_FillRuleIds(rules);
 
 						var ccu = new CodeCompileUnit();

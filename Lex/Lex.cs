@@ -14,6 +14,36 @@ namespace L
 #endif
 	static class Lex
 	{
+		public static void RenderOptimizedExecutionGraph(string expression,string filename)
+		{
+			RenderOptimizedExecutionGraph(LexContext.Create(expression), filename);
+		}	
+		public static void RenderOptimizedExecutionGraph(LexContext expression,string filename)
+		{
+			var ast = Ast.Parse(expression);
+			var fa = FA.FromAst(ast);
+			fa.TrimNeutrals();
+			fa.RenderToFile(filename);
+		}
+		public static int[][] FinalizePart(int[][] part, int match=0)
+		{
+			var result = new List<int[]>(part.Length + 3);
+			var inst = new int[2];
+			inst[0] = Compiler.Save;
+			inst[1] = 0;
+			result.Add(inst);
+			Compiler.Fixup(part, result.Count);
+			result.AddRange(part);
+			inst = new int[2];
+			inst[0] = Compiler.Save;
+			inst[1] = 1;
+			result.Add(inst);
+			inst = new int[2];
+			inst[0] = Compiler.Match;
+			inst[1] = match;
+			result.Add(inst);
+			return result.ToArray();
+		}
 		public static int[] GetCharacterClass(string name)
 		{
 			if (null == name)
@@ -61,8 +91,8 @@ namespace L
 		/// <returns>A program</returns>
 		public static int[][] AssembleFrom(string asmFile)
 		{
-			var lc = LexContext.CreateFrom(asmFile);
-			return Assembler.Emit(Assembler.Parse(lc)).ToArray();
+			using (var lc = LexContext.CreateFrom(asmFile))
+				return Assembler.Emit(Assembler.Parse(lc)).ToArray();
 		}
 		/// <summary>
 		/// Assembles the assembly code from the specified url
@@ -71,9 +101,10 @@ namespace L
 		/// <returns>A program</returns>
 		public static int[][] AssembleFromUrl(string asmUrl)
 		{
-			var lc = LexContext.CreateFromUrl(asmUrl);
-			return Assembler.Emit(Assembler.Parse(lc)).ToArray();
+			using (var lc = LexContext.CreateFromUrl(asmUrl))
+				return Assembler.Emit(Assembler.Parse(lc)).ToArray();
 		}
+
 		/// <summary>
 		/// Compiles a single regular expression into a program segment
 		/// </summary>
@@ -83,6 +114,20 @@ namespace L
 		{
 			var ast = Ast.Parse(input);
 			var prog = new List<int[]>();
+			FA fa = null;
+			try
+			{
+				fa = FA.FromAst(ast);
+			}
+			// we can't do lazy expressions
+			catch (NotSupportedException) { }
+			//fa = null;// for testing
+			if (null != fa)
+			{
+				fa.RenderToFile(@"..\..\emit_nfa.jpg");
+				Compiler.EmitPart(fa, prog);
+				return prog.ToArray();
+			}
 			Compiler.EmitPart(ast, prog);
 			return prog.ToArray();
 		}
@@ -123,13 +168,14 @@ namespace L
 		/// Compiles a series of regular expressions into a program
 		/// </summary>
 		/// <param name="expressions">The expressions</param>
+		/// <param name="optimize">True to generate optimized code, false to use the standard generator</param>
 		/// <returns>A program</returns>
-		public static int[][] CompileLexerRegex(params string[] expressions)
+		public static int[][] CompileLexerRegex(bool optimize,params string[] expressions)
 		{
 			var asts = new Ast[expressions.Length];
 			for(var i = 0;i<expressions.Length;++i)
 				asts[i] = Ast.Parse(LexContext.Create(expressions[i]));
-			return Compiler.EmitLexer(asts);
+			return Compiler.EmitLexer(optimize,asts);
 		}
 		/// <summary>
 		/// Links a series of partial programs together into single lexer program
@@ -160,6 +206,16 @@ namespace L
 			return -1 != Run(prog, input) && input.Current==LexContext.EndOfInput;
 		}
 		/// <summary>
+		/// Indicates whether or not the program matches the entire input specified
+		/// </summary>
+		/// <param name="prog">The program</param>
+		/// <param name="input">The input to check</param>
+		/// <returns>True if the input was matched, otherwise false</returns>
+		public static bool IsMatch(int[][] prog, string input)
+		{
+			return IsMatch(prog, LexContext.Create(input));
+		}
+		/// <summary>
 		/// Runs the specified program over the specified input
 		/// </summary>
 		/// <param name="prog">The program to run</param>
@@ -183,24 +239,26 @@ namespace L
 			_EnqueueFiber(ref currentFiberCount, ref currentFibers, new _Fiber(prog,0, saved), 0);
 			matched = null;
 			var cur = -1;
-			if(LexContext.EndOfInput!=input.Current)
+			if (LexContext.EndOfInput != input.Current)
 			{
 				var ch1 = unchecked((char)input.Current);
 				if (char.IsHighSurrogate(ch1))
 				{
 					if (-1 == input.Advance())
-						throw new ExpectingException("Expecting low surrogate in unicode stream. The input source is corrupt or not valid Unicode",input.Line,input.Column,input.Position,input.FileOrUrl) ;
+						throw new ExpectingException("Expecting low surrogate in unicode stream. The input source is corrupt or not valid Unicode", input.Line, input.Column, input.Position, input.FileOrUrl);
 					var ch2 = unchecked((char)input.Current);
 					cur = char.ConvertToUtf32(ch1, ch2);
 				}
 				else
 					cur = ch1;
-				
+
 			}
+			
 			
 			while(0<currentFiberCount)
 			{
 				bool passed = false;
+				
 				for (i = 0; i < currentFiberCount; ++i)
 				{
 					var t = currentFibers[i];
@@ -208,6 +266,39 @@ namespace L
 					saved = t.Saved;
 					switch (pc[0])
 					{
+						case Compiler.Switch:
+							var idx = 1;
+							while(idx<pc.Length && -2<pc[idx])
+							{
+								if (_InRanges(pc, ref idx, cur))
+								{
+									while (-1!=pc[idx])
+										++idx;
+
+									++idx;
+									passed = true;
+									_EnqueueFiber(ref nextFiberCount, ref nextFibers, new _Fiber(t, pc[idx], saved), sp + 1);
+									idx = pc.Length;
+									break;
+								}
+								else
+								{
+									while (-1!=pc[idx])
+										++idx;
+									++idx;
+								}
+								++idx;
+							}
+							if(idx<pc.Length&&-2==pc[idx])
+							{
+								++idx;
+								while(idx<pc.Length)
+								{
+									_EnqueueFiber(ref currentFiberCount, ref currentFibers, new _Fiber(t, pc[idx], saved), sp);
+									++idx;
+								}
+							}
+							break;
 						case Compiler.Char:
 							if (cur!= pc[1])
 							{
@@ -215,13 +306,15 @@ namespace L
 							}
 							goto case Compiler.Any;
 						case Compiler.Set:
-							if (!_InRanges(pc, cur))
+							idx = 1;
+							if (!_InRanges(pc,ref idx, cur))
 							{
 								break;
 							}
 							goto case Compiler.Any;
 						case Compiler.NSet:
-							if (_InRanges(pc, cur))
+							idx = 1;
+							if (_InRanges(pc, ref idx,cur))
 							{
 								break;
 							}
@@ -278,8 +371,9 @@ namespace L
 						}
 						else
 							cur = ch1;
-						
 					}
+					else
+						cur = -1;
 					++sp;
 				}
 				tmp = currentFibers;
@@ -301,13 +395,221 @@ namespace L
 			};
 			return -1; // error symbol
 		}
-		
-		static bool _InRanges(int[] pc,int ch)
+
+		/// <summary>
+		/// Runs the specified program over the specified input, logging the run to <paramref name="log"/>
+		/// </summary>
+		/// <param name="prog">The program to run</param>
+		/// <param name="input">The input to match</param>
+		/// <param name="log">The log to output to</param>
+		/// <returns>The id of the match, or -1 for an error. <see cref="LexContext.CaptureBuffer"/> contains the captured value.</returns>
+		public static int RunWithLogging(int[][] prog, LexContext input,TextWriter log)
+		{
+			// for speed we rewrite this routine so we don't have the overhead of
+			// logging in the main routine
+			input.EnsureStarted();
+			int i, match = -1;
+			_Fiber[] currentFibers, nextFibers, tmp;
+			int currentFiberCount = 0, nextFiberCount = 0;
+			int[] pc;
+			// position in input
+			int sp = 0;
+			// stores our captured input
+			var sb = new StringBuilder(64);
+			int[] saved, matched;
+			saved = new int[2];
+			currentFibers = new _Fiber[prog.Length];
+			nextFibers = new _Fiber[prog.Length];
+			_EnqueueFiber(ref currentFiberCount, ref currentFibers, new _Fiber(prog, 0, saved), 0);
+			matched = null;
+			var cur = -1;
+			if (LexContext.EndOfInput != input.Current)
+			{
+				var ch1 = unchecked((char)input.Current);
+				if (char.IsHighSurrogate(ch1))
+				{
+					if (-1 == input.Advance())
+						throw new ExpectingException("Expecting low surrogate in unicode stream. The input source is corrupt or not valid Unicode", input.Line, input.Column, input.Position, input.FileOrUrl);
+					var ch2 = unchecked((char)input.Current);
+					cur = char.ConvertToUtf32(ch1, ch2);
+				}
+				else
+					cur = ch1;
+
+			}
+			else
+				cur = -1;
+
+			while (0 < currentFiberCount)
+			{
+				bool passed = false;
+				for (i = 0; i < currentFiberCount; ++i)
+				{
+					var lpassed = false;
+					var shouldLog = false;
+					var t = currentFibers[i];
+					pc = t.Program[t.Index];
+					saved = t.Saved;
+					switch (pc[0])
+					{
+						case Compiler.Switch:
+							var idx = 1;
+							shouldLog = true;
+							while (idx < pc.Length && -2 < pc[idx])
+							{
+								if (_InRanges(pc, ref idx, cur))
+								{
+									while (-1!=pc[idx])
+										++idx;
+
+									++idx;
+									lpassed = true;
+									passed = true;
+									_EnqueueFiber(ref nextFiberCount, ref nextFibers, new _Fiber(t, pc[idx], saved), sp + 1);
+									idx = pc.Length;
+									break;
+								}
+								else
+								{
+									while (-1!=pc[idx])
+										++idx;
+									++idx;
+								}
+								++idx;
+							}
+							if (idx < pc.Length && -2 == pc[idx])
+							{
+								++idx;
+								while (pc.Length > idx)
+								{
+									_EnqueueFiber(ref currentFiberCount, ref currentFibers, new _Fiber(t, pc[idx], saved), sp );
+									++idx;
+								}
+							}
+							break;
+						case Compiler.Char:
+							shouldLog = true;
+							if (cur != pc[1])
+							{
+								break;
+							}
+							goto case Compiler.Any;
+						case Compiler.Set:
+							shouldLog = true; 
+							idx = 1;
+							if (!_InRanges(pc, ref idx, cur))
+							{
+								break;
+							}
+							goto case Compiler.Any;
+						case Compiler.NSet:
+
+							shouldLog = true; 
+							idx = 1;
+							if (_InRanges(pc, ref idx, cur))
+							{
+								break;
+							}
+							goto case Compiler.Any;
+						case Compiler.UCode:
+							shouldLog = true; 
+							var str = char.ConvertFromUtf32(cur);
+							if (unchecked((int)char.GetUnicodeCategory(str, 0) != pc[1]))
+							{
+								break;
+							}
+							goto case Compiler.Any;
+						case Compiler.NUCode:
+							shouldLog = true;
+							str = char.ConvertFromUtf32(cur);
+							if (unchecked((int)char.GetUnicodeCategory(str, 0)) == pc[1])
+							{
+								break;
+							}
+							goto case Compiler.Any;
+
+						case Compiler.Any:
+							shouldLog = true;
+							if (LexContext.EndOfInput == input.Current)
+							{
+								break;
+							}
+							passed = true;
+							lpassed = true;
+							_EnqueueFiber(ref nextFiberCount, ref nextFibers, new _Fiber(t, t.Index + 1, saved), sp + 1);
+
+							break;
+						case Compiler.Match:
+							matched = saved;
+							match = pc[1];
+
+							// break the for loop:
+							i = currentFiberCount;
+							break;
+
+					}
+					if(shouldLog)
+						_LogInstruction(input,pc, cur, sp, lpassed, log);
+				}
+				
+				if (passed)
+				{
+					sb.Append(char.ConvertFromUtf32(cur));
+					input.Advance();
+					if (LexContext.EndOfInput != input.Current)
+					{
+						var ch1 = unchecked((char)input.Current);
+						if (char.IsHighSurrogate(ch1))
+						{
+							input.Advance();
+							if (-1 == input.Advance())
+								throw new ExpectingException("Expecting low surrogate in unicode stream. The input source is corrupt or not valid Unicode", input.Line, input.Column, input.Position, input.FileOrUrl);
+							++sp;
+							var ch2 = unchecked((char)input.Current);
+							cur = char.ConvertToUtf32(ch1, ch2);
+						}
+						else
+							cur = ch1;
+
+					}
+					else
+						cur = -1;
+					++sp;
+				} 
+				tmp = currentFibers;
+				currentFibers = nextFibers;
+				nextFibers = tmp;
+				currentFiberCount = nextFiberCount;
+				nextFiberCount = 0;
+
+			}
+
+			if (null != matched)
+			{
+				var start = matched[0];
+				// this is actually the point just past the end
+				// of the match, but we can treat it as the length
+				var len = matched[1];
+				input.CaptureBuffer.Append(sb.ToString(start, len - start));
+				return match;
+			};
+			return -1; // error symbol
+		}
+		static void _LogInstruction(LexContext input,int[] pc,int cur, int sp,bool passed,TextWriter log)
+		{
+			log.WriteLine("[" + sp+ "] " + (cur!=-1?char.ConvertFromUtf32(cur):"<EOI>") + ": " + Compiler.ToString(pc)+" "+(passed?"passed":(pc[0]==Compiler.Switch && -1<Array.IndexOf(pc,-2)?"defaulted":"failed")));
+		}
+		static bool _InRanges(int[] pc,ref int index,int ch)
 		{
 			var found = false;
 			// go through all the ranges to see if we matched anything.
-			for (var j = 1; j < pc.Length; ++j)
+			for (var j = index; j < pc.Length; ++j)
 			{
+				if (0 > pc[j])
+				{
+					index = j;
+					return false;
+				}
 				// grab our range from the packed ranges into first and last
 				var first = pc[j];
 				++j;
@@ -317,9 +619,11 @@ namespace L
 				{
 					if (first <= ch)
 						found = true;
-					break;
+					index = j;
+					return found;
 				}
 			}
+			index = pc.Length;
 			return found;
 		}
 		static void _EnqueueFiber(ref int lcount,ref _Fiber[] l, _Fiber t, int sp)
@@ -337,9 +641,6 @@ namespace L
 			switch (pc[0])
 			{
 				case Compiler.Jmp:
-					_EnqueueFiber(ref lcount,ref l, new _Fiber(t, pc[1],t.Saved),sp);
-					break;
-				case Compiler.Split:
 					for (var j = 1; j < pc.Length; j++)
 						_EnqueueFiber(ref lcount,ref l, new _Fiber(t.Program, pc[j],t.Saved),sp);
 					break;

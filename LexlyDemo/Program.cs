@@ -23,14 +23,14 @@ namespace LexlyDemo
 			using (var sr = new StreamReader(@"..\..\Program.cs"))
 				text = sr.ReadToEnd();
 			// our test data - 14 tokens. 29 length
-			text = "fubar bar 123 1foo bar 1243 0";
+			
 			Console.WriteLine("Lex: " + text);
 
 			var tokenizer = new SlangTokenizer(text); // generated from Example.lx
-
-			//Console.WriteLine("Disassembly:");
-			//Console.WriteLine(Lex.Disassemble(SlangTokenizer.Program));
-			//Console.WriteLine();
+			
+			Console.WriteLine("Disassembly:");
+			Console.WriteLine(Lex.Disassemble(SlangTokenizer.Program));
+			Console.WriteLine();
 			
 			foreach (var tok in tokenizer)
 			{

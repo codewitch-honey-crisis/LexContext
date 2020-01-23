@@ -2,7 +2,7 @@
 save 0
 set "A".."Z", "_", "a".."z"
 loop: 
-split idpart, done
+jmp idpart, done
 idpart: 
 set "0".."9", "A".."Z", "_", "a".."z"
 jmp loop

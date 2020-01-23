@@ -8,8 +8,8 @@ namespace L
 	{
 		#region Opcodes
 		internal const int Match = 1; // match symbol
-		internal const int Jmp = 2; // jmp addr
-		internal const int Split = 3; // split addr1, addr2
+		internal const int Jmp = 2; // jmp addr1, addr2
+		internal const int Switch = 3; // switch [ case <ranges>:<label> { , case <ranges>:<label> }] [, default: <label> {, <label> } ]
 		internal const int Any = 4; // any
 		internal const int Char = 5; // char ch
 		internal const int Set = 6; // set packedRange1Left,packedRange1Right,packedRange2Left,packedRange2Right...
@@ -51,6 +51,7 @@ namespace L
 		}
 		internal static void EmitPart(Ast ast, IList<int[]> prog)
 		{
+			
 			int[] inst,jmp;
 			switch(ast.Kind)
 			{
@@ -69,16 +70,19 @@ namespace L
 				case Ast.Dot: // dot/any
 					inst = new int[1];
 					inst[0] = Any;
+					prog.Add(inst);
 					break;
 				case Ast.Alt: // alternation
+					
 					// be sure to handle the cases where one
 					// of the children is null such as
 					// in (foo|) or (|foo)
 					var exprs = new List<Ast>(ast.Exprs.Length);
 					var firstNull = -1;
-					for (var i = 0; i < ast.Exprs.Length; ++i)
+					for (var i = 0; i < ast.Exprs.Length; i++)
 					{
-						if (null == ast.Exprs[i])
+						var e = ast.Exprs[i];
+						if (null == e)
 						{
 							if (0 > firstNull)
 							{
@@ -87,21 +91,21 @@ namespace L
 							}
 							continue;
 						}
-						exprs.Add(ast.Exprs[i]);
+						exprs.Add(e);
 					}
 					ast.Exprs = exprs.ToArray();
-					var split = new int[ast.Exprs.Length + 1];
-					split[0] = Split;
-					prog.Add(split);
+					var jjmp = new int[ast.Exprs.Length + 1];
+					jjmp[0] = Jmp;
+					prog.Add(jjmp);
 					var jmpfixes = new List<int>(ast.Exprs.Length - 1);
-					for(var i = 0;i<ast.Exprs.Length;++i)
+					for (var i = 0; i < ast.Exprs.Length; ++i)
 					{
 						var e = ast.Exprs[i];
-						if(null!=e)
+						if (null != e)
 						{
-							split[i + 1] = prog.Count;
+							jjmp[i + 1] = prog.Count;
 							EmitPart(e, prog);
-							if(i==ast.Exprs.Length-1)
+							if (i == ast.Exprs.Length - 1)
 								continue;
 							if (i == ast.Exprs.Length - 2 && null == ast.Exprs[i + 1])
 								continue;
@@ -111,16 +115,17 @@ namespace L
 							prog.Add(j);
 						}
 					}
-					for(int ic=jmpfixes.Count,i=0;i<ic;++i)
+					for (int ic = jmpfixes.Count, i = 0; i < ic; ++i)
 					{
 						var j = prog[jmpfixes[i]];
 						j[1] = prog.Count;
 					}
-					if(-1<firstNull)
+					if (-1 < firstNull)
 					{
-						split[firstNull + 1] = prog.Count;
+						jjmp[firstNull + 1] = prog.Count;
 					}
 					break;
+					
 				case Ast.NSet:
 				case Ast.Set:
 					// generate a set or nset instruction
@@ -147,8 +152,8 @@ namespace L
 				case Ast.Opt:
 					inst = new int[3];
 					// we have to choose betweed Left or empty
-					// split <pc>, <<next>>
-					inst[0] = Split;
+					// jmp <pc>, <<next>>
+					inst[0] = Jmp;
 					prog.Add(inst);
 					inst[1] = prog.Count;
 					// emit 
@@ -158,7 +163,7 @@ namespace L
 					inst[2] = prog.Count;
 					if (ast.IsLazy)
 					{
-						// non-greedy, swap split
+						// non-greedy, swap jmp
 						var t = inst[1];
 						inst[1] = inst[2];
 						inst[2] = t;
@@ -200,7 +205,7 @@ namespace L
 								case 0:
 									idx = prog.Count;
 									inst = new int[3];
-									inst[0] = Split;
+									inst[0] = Jmp;
 									prog.Add(inst);
 									inst[1] = prog.Count;
 									for (var i = 0; i < ast.Exprs.Length; i++)
@@ -212,7 +217,7 @@ namespace L
 									prog.Add(jmp);
 									inst[2] = prog.Count;
 									if (ast.IsLazy)
-									{   // non-greedy - swap split
+									{   // non-greedy - swap jmp
 										var t = inst[1];
 										inst[1] = inst[2];
 										inst[2] = t;
@@ -249,13 +254,13 @@ namespace L
 										if (null != ast.Exprs[i])
 											EmitPart(ast.Exprs[i], prog);
 									inst = new int[3];
-									inst[0] = Split;
+									inst[0] = Jmp;
 									prog.Add(inst);
 									inst[1] = idx;
 									inst[2] = prog.Count;
 									if (ast.IsLazy)
 									{
-										// non-greedy, swap split
+										// non-greedy, swap jmp
 										var t = inst[1];
 										inst[1] = inst[2];
 										inst[2] = t;
@@ -327,7 +332,151 @@ namespace L
 
 			}
 		}
-		
+
+		internal static void EmitPart(FA gnfa,IList<int[]> prog)
+		{
+			// TODO: Make sure this is an actual GNFA and not just an NFA
+			// NFA that is not a GNFA will not work
+			gnfa = gnfa.ToGnfa();
+			gnfa.TrimNeutrals();
+			var rendered = new Dictionary<FA, int>();
+			var swFixups = new Dictionary<FA, int>();
+			var jmpFixups = new Dictionary<FA, int>();
+			var l = new List<FA>();
+			gnfa.FillClosure(l);
+			// move the accepting state to the end
+			var fas = gnfa.FirstAcceptingState;
+			var afai = l.IndexOf(fas);
+			l.RemoveAt(afai);
+			l.Add(fas);
+			for(int ic=l.Count,i=0;i<ic;++i)
+			{
+				var fa = l[i];
+				rendered.Add(fa, prog.Count);
+				if (!fa.IsFinal)
+				{
+					int swfixup = prog.Count;
+					prog.Add(null);
+					swFixups.Add(fa, swfixup);
+				} 
+				/*if(ic-1!=i)
+				{
+					if (0==fa.EpsilonTransitions.Count)
+					{
+						jmpFixups.Add(fa, prog.Count);
+						prog.Add(null);
+					}
+				}*/
+			}
+			for(int ic=l.Count,i=0;i<ic;++i)
+			{
+				var fa = l[i];
+				if (!fa.IsFinal)
+				{
+					var sw = new List<int>();
+					sw.Add(Switch);
+					int[] simple = null;
+					if(1==fa.InputTransitions.Count && 0==fa.EpsilonTransitions.Count)
+					{
+						foreach(var trns in fa.InputTransitions)
+						{
+							if (l.IndexOf(trns.Key)==i+1)
+							{
+								simple = trns.Value;
+							}
+						}
+					}
+					if (null!=simple)
+					{
+						if (2 < simple.Length || simple[0] != simple[1])
+						{
+							sw[0] = Set;
+							sw.AddRange(simple);
+						}
+						else
+						{
+							sw[0] = Char;
+							sw.Add(simple[0]);
+						}
+						
+
+					}
+					else
+					{
+						foreach (var trns in fa.InputTransitions)
+						{
+							var dst = rendered[trns.Key];
+							sw.AddRange(trns.Value);
+							sw.Add(-1);
+							sw.Add(dst);
+						}
+						if (0 < fa.InputTransitions.Count && 0 < fa.EpsilonTransitions.Count)
+							sw.Add(-2);
+						else if (0 == fa.InputTransitions.Count)
+							sw[0] = Jmp;
+						foreach (var efa in fa.EpsilonTransitions)
+						{
+							var dst = rendered[efa];
+							sw.Add(dst);
+						}
+						
+					}
+					prog[swFixups[fa]] = sw.ToArray();
+				}
+				
+				var jfi = -1;
+				if (jmpFixups.TryGetValue(fa, out jfi))
+				{
+					var jmp = new int[2];
+					jmp[0] = Jmp;
+					jmp[1] = prog.Count;
+					prog[jfi] = jmp;
+				}
+				
+				
+			}
+			
+			
+		}
+		static void _EmitPart(FA fa,IDictionary<FA,int> rendered, IList<int[]> prog)
+		{
+			if (fa.IsFinal)
+				return;
+			int swfixup = prog.Count;
+			var sw = new List<int>();
+			sw.Add(Switch);
+			prog.Add(null);
+			foreach (var trns in fa.InputTransitions)
+			{
+				var dst = -1;
+				if(!rendered.TryGetValue(trns.Key,out dst))
+				{
+					dst = prog.Count;
+					rendered.Add(trns.Key, dst);
+					_EmitPart(trns.Key, rendered, prog);
+
+				}
+				sw.AddRange(trns.Value);
+				sw.Add(-1);
+				sw.Add(dst);
+			}
+			if(0<fa.InputTransitions.Count && 0<fa.EpsilonTransitions.Count)
+				sw.Add(-2);
+			else if (0==fa.InputTransitions.Count)
+				sw[0] = Jmp;
+			foreach(var efa in fa.EpsilonTransitions)
+			{
+				var dst = -1;
+				if (!rendered.TryGetValue(efa, out dst))
+				{
+					dst = prog.Count;
+					rendered.Add(efa, dst);
+					_EmitPart(efa, rendered, prog);
+				}
+				sw.Add(dst);
+			}
+			prog[swfixup] = sw.ToArray();
+		}
 		static string _FmtLbl(int i)
 		{
 			return string.Format("L{0,4:000#}", i);
@@ -345,11 +494,11 @@ namespace L
 			}
 			return sb.ToString();
 		}
-		static string _ToStr(char ch)
+		static string _ToStr(int ch)
 		{
 			return string.Concat('\"', _EscChar(ch), '\"');
 		}
-		static string _EscChar(char ch)
+		static string _EscChar(int ch)
 		{
 			switch (ch)
 			{
@@ -373,7 +522,7 @@ namespace L
 				case '$':
 				case '^':
 				case '\\':
-					return string.Concat("\\", ch.ToString());
+					return "\\"+char.ConvertFromUtf32(ch);
 				case '\t':
 					return "\\t";
 				case '\n':
@@ -389,32 +538,85 @@ namespace L
 				case '\b':
 					return "\\b";
 				default:
-					if (!char.IsLetterOrDigit(ch) && !char.IsSeparator(ch) && !char.IsPunctuation(ch) && !char.IsSymbol(ch))
+					var s = char.ConvertFromUtf32(ch);
+					if (!char.IsLetterOrDigit(s,0) && !char.IsSeparator(s,0) && !char.IsPunctuation(s,0) && !char.IsSymbol(s,0))
 					{
-
-						return string.Concat("\\x", unchecked((ushort)ch).ToString("x4"));
+						if (1 == s.Length)
+							return string.Concat(@"\u", unchecked((ushort)ch).ToString("x4"));
+						else
+							return string.Concat(@"\U" + ch.ToString("x8"));
+						
 
 					}
 					else
-						return string.Concat(ch);
+						return s;
 			}
+		}
+		static int _AppendRanges(StringBuilder sb, int[] inst,int index)
+		{
+			var i = index;
+			for (i = index; i < inst.Length - 1; i++)
+			{
+				if (-1 == inst[i])
+					return i;
+				if (index != i)
+					sb.Append(", ");
+				if (inst[i] == inst[i + 1])
+					sb.Append(_ToStr(inst[i]));
+				else
+				{
+					sb.Append(_ToStr(inst[i]));
+					sb.Append("..");
+					sb.Append(_ToStr(inst[i + 1]));
+				}
+
+				++i;
+			}
+			return i;
 		}
 		public static string ToString(int[] inst)
 		{
 			switch (inst[0])
 			{
-				case Split:
+				case Jmp:
 					var sb = new StringBuilder();
-					sb.Append("split ");
+					sb.Append("jmp ");
 					sb.Append(_FmtLbl(inst[1]));
 					for (var i = 2; i < inst.Length; i++)
 						sb.Append(", " + _FmtLbl(inst[i]));
 					return sb.ToString();
-				case Jmp:
-					return "jmp " + _FmtLbl(inst[1]);
+				case Switch:
+					sb = new StringBuilder();
+					sb.Append("switch ");
+					var j = 1;
+					for(;j<inst.Length;)
+					{
+						if (-2 == inst[j])
+							break;
+						if (j != 1)
+							sb.Append(", ");
+						sb.Append("case ");
+						j = _AppendRanges(sb, inst, j);
+						++j;
+						sb.Append(":");
+						sb.Append(_FmtLbl(inst[j]));
+						++j;
+					}
+					if(j<inst.Length && -2==inst[j])
+					{
+						sb.Append(", default:");
+						var delim = "";
+						for(++j;j<inst.Length;j++)
+						{
+							sb.Append(delim);
+							sb.Append(_FmtLbl(inst[j]));
+							delim = ", ";
+						}
+					}
+					return sb.ToString();
 				case Char:
 					if (2==inst.Length)// for testing
-						return "char " + _ToStr((char)inst[1]);
+						return "char " + _ToStr(inst[1]);
 					else return "char";
 				case UCode:
 				case NUCode:
@@ -431,12 +633,12 @@ namespace L
 						if (1 != i)
 							sb.Append(", ");
 						if (inst[i] == inst[i + 1])
-							sb.Append(_ToStr((char)inst[i]));
+							sb.Append(_ToStr(inst[i]));
 						else
 						{
-							sb.Append(_ToStr((char)inst[i]));
+							sb.Append(_ToStr(inst[i]));
 							sb.Append("..");
-							sb.Append(_ToStr((char)inst[i+1]));
+							sb.Append(_ToStr(inst[i+1]));
 						}
 							
 						++i;
@@ -452,16 +654,108 @@ namespace L
 					throw new InvalidProgramException("The instruction is not valid");
 			}
 		}
-		internal static int[][] EmitLexer(params Ast[] expressions)
+		internal static int[][] EmitLexer(bool optimize,params Ast[] expressions)
 		{
 			var parts = new KeyValuePair<int, int[][]>[expressions.Length];
 			for (var i = 0;i<expressions.Length;++i)
 			{
 				var l = new List<int[]>();
-				EmitPart(expressions[i], l);
+				FA fa = null;
+				if (optimize)
+				{
+					try
+					{
+						fa = FA.FromAst(expressions[i]);
+					}
+					// we can't do lazy expressions
+					catch (NotSupportedException) { }
+				}
+				//fa = null;// for testing
+				if (null != fa)
+				{
+					EmitPart(fa, l);
+				} else
+				{
+					EmitPart(expressions[i], l);
+
+				}
 				parts[i] = new KeyValuePair<int,int[][]>(i,l.ToArray());
 			}
-			return EmitLexer(parts);
+			var result =  EmitLexer(parts);
+			if(optimize)
+			{
+				result = _RemoveDeadCode(result);
+			}
+			return result;
+		}
+		static int[][] _RemoveDeadCode(int[][] prog)
+		{
+			var done = false;
+			while(!done)
+			{
+				done = true;
+				var toRemove = -1;
+				for(var i = 0;i<prog.Length;++i)
+				{
+					var pc = prog[i];
+					// remove L0001: jmp L0002
+					if(Jmp==pc[0] && i+1==pc[1] && 2==pc.Length)
+					{
+						toRemove = i;
+						break;
+					}
+				}
+				if(-1!=toRemove)
+				{
+					done = false;
+					var newProg = new List<int[]>(prog.Length-1);
+					for(var i = 0;i<toRemove;++i)
+					{
+						var inst = prog[i];
+						switch(inst[0])
+						{
+							case Switch:
+								var inDef = false;
+								for (var j = 0; j < inst.Length; j++)
+								{
+									if (inDef)
+									{
+										if(inst[j]>toRemove)
+											--inst[j];
+									}
+									else
+									{
+										if (-1 == inst[j])
+										{
+											++j;
+											if (inst[j] > toRemove)
+												--inst[j];
+										}
+										else if (-2 == inst[j])
+											inDef = true;
+									}
+								}
+								break;
+							case Jmp:
+								for (var j = 1; j < inst.Length; j++)
+									if (inst[j] > toRemove)
+										--inst[j];
+								break;
+						}
+						newProg.Add(prog[i]);
+					}
+					var progNext = new List<int[]>(prog.Length - toRemove - 1);
+					for(var i = toRemove+1;i<prog.Length;i++)
+					{
+						progNext.Add(prog[i]);
+					}
+					var pna = progNext.ToArray();
+					Fixup(pna, -1);
+					newProg.AddRange(pna);
+					prog = newProg.ToArray();
+				}
+			}
+			return prog;
 		}
 		internal static int[][] EmitLexer(IEnumerable<KeyValuePair<int,int[][]>> parts)
 		{
@@ -474,16 +768,16 @@ namespace L
 			save[1] = 0;
 			prog.Add(save);
 
-			// generate the primary split instruction
-			var split = new int[l.Count+ 2];
-			split[0] = Compiler.Split;
-			prog.Add(split);
+			// generate the primary jmp instruction
+			var jmp = new int[l.Count+ 2];
+			jmp[0] = Compiler.Jmp;
+			prog.Add(jmp);
 			// for each expressions, render a save 0
 			// followed by the the instructions
 			// followed by save 1, and then match <i>
 			for (int ic=l.Count,i = 0; i < ic; ++i)
 			{
-				split[i + 1] = prog.Count;
+				jmp[i + 1] = prog.Count;
 				
 				// expr
 				Fixup(l[i].Value, prog.Count);
@@ -501,7 +795,7 @@ namespace L
 			}
 			// generate the error condition
 			// handling
-			split[split.Length - 1] = prog.Count;
+			jmp[jmp.Length - 1] = prog.Count;
 			// any
 			var any = new int[1];
 			any[0] = Any;
@@ -545,10 +839,27 @@ namespace L
 				var op = inst[0];
 				switch(op)
 				{
+					case Switch:
+						var inDef = false;
+						for(var j = 0;j<inst.Length;j++)
+						{
+							if (inDef)
+							{
+								inst[j] += offset;
+							}
+							else
+							{
+								if (-1 == inst[j])
+								{
+									++j;
+									inst[j] += offset;
+								}
+								else if (-2 == inst[j])
+									inDef = true;
+							}
+						}
+					break;
 					case Jmp:
-						inst[1] += offset;
-						break;
-					case Split:
 						for (var j = 1; j < inst.Length; j++)
 							inst[j] += offset;
 						break;

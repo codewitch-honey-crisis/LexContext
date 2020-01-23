@@ -85,10 +85,9 @@ namespace LexlyDemo {
         #region Opcodes
         const int _Match = 1;
         //  match symbol
+        // const int _Jmp = 2; // jmp addr
         const int _Jmp = 2;
-        //  jmp addr
-        const int _Split = 3;
-        //  split addr1, addr2
+        //  jmp addr1 {, addrN }
         const int _Any = 4;
         //  any
         const int _Char = 5;
@@ -345,10 +344,6 @@ namespace LexlyDemo {
             int[] pc = t.Program[t.Index];
             int op = pc[0];
             if ((TokenizerEnumerator._Jmp == op)) {
-                TokenizerEnumerator._EnqueueFiber(ref lcount, ref l, new TokenizerFiber(t, pc[1], t.Saved), sp);
-                return;
-            }
-            if ((TokenizerEnumerator._Split == op)) {
                 for (int j = 1; (j < pc.Length); j = (j + 1)) {
                     TokenizerEnumerator._EnqueueFiber(ref lcount, ref l, new TokenizerFiber(t.Program, pc[j], t.Saved), sp);
                 }
@@ -554,11 +549,11 @@ namespace LexlyDemo {
                         10,
                         0},
                 new int[] {
-                        3,
+                        2,
                         2,
                         8,
-                        19,
-                        22},
+                        15,
+                        18},
                 new int[] {
                         6,
                         65,
@@ -568,7 +563,7 @@ namespace LexlyDemo {
                         97,
                         122},
                 new int[] {
-                        3,
+                        2,
                         4,
                         6},
                 new int[] {
@@ -591,37 +586,37 @@ namespace LexlyDemo {
                         1,
                         0},
                 new int[] {
-                        3,
+                        2,
                         9,
                         11},
                 new int[] {
-                        5,
-                        48},
-                new int[] {
-                        2,
-                        17},
-                new int[] {
                         3,
-                        12,
-                        13},
-                new int[] {
-                        5,
-                        45},
-                new int[] {
-                        6,
-                        49,
-                        57},
-                new int[] {
-                        3,
-                        15,
-                        17},
-                new int[] {
-                        6,
                         48,
-                        57},
+                        48,
+                        -1,
+                        10},
                 new int[] {
-                        2,
-                        14},
+                        3,
+                        48,
+                        48,
+                        -1,
+                        10},
+                new int[] {
+                        3,
+                        45,
+                        45,
+                        -1,
+                        12,
+                        -2,
+                        12},
+                new int[] {
+                        3,
+                        45,
+                        45,
+                        -1,
+                        12,
+                        -2,
+                        12},
                 new int[] {
                         10,
                         1},

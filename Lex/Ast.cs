@@ -49,10 +49,20 @@ namespace L
 							result = dot;
 						else
 						{
-							var cat = new Ast();
-							cat.Kind = Ast.Cat;
-							cat.Exprs = new Ast[] { result, dot };
-							result = cat;
+							if (Ast.Cat == result.Kind)
+							{
+								var exprs = new Ast[result.Exprs.Length + 1];
+								Array.Copy(result.Exprs, 0, exprs, 0, result.Exprs.Length);
+								exprs[exprs.Length - 1] = dot;
+								result.Exprs = exprs;
+							}
+							else
+							{
+								var cat = new Ast();
+								cat.Kind = Ast.Cat;
+								cat.Exprs = new Ast[] { result, dot };
+								result = cat;
+							}
 						}
 						pc.Advance();
 						result = _ParseModifier(result, pc);
@@ -230,10 +240,20 @@ namespace L
 						next = _ParseModifier(next, pc);
 						if (null != result)
 						{
-							var cat = new Ast();
-							cat.Kind = Ast.Cat;
-							cat.Exprs = new Ast[] { result, next };
-							result = cat;
+							if (Ast.Cat == result.Kind)
+							{
+								var exprs = new Ast[result.Exprs.Length + 1];
+								Array.Copy(result.Exprs, 0, exprs, 0, result.Exprs.Length);
+								exprs[exprs.Length - 1] = next;
+								result.Exprs = exprs;
+							}
+							else
+							{
+								var cat = new Ast();
+								cat.Kind = Ast.Cat;
+								cat.Exprs = new Ast[] { result, next};
+								result = cat;
+							}
 						}
 						else
 							result = next;
@@ -251,10 +271,20 @@ namespace L
 							result = next;
 						else
 						{
-							var cat = new Ast();
-							cat.Kind = Ast.Cat;
-							cat.Exprs = new Ast[] { result, next };
-							result = cat;
+							if (Ast.Cat == result.Kind)
+							{
+								var exprs = new Ast[result.Exprs.Length + 1];
+								Array.Copy(result.Exprs, 0, exprs, 0, result.Exprs.Length);
+								exprs[exprs.Length - 1] = next;
+								result.Exprs = exprs;
+							}
+							else
+							{
+								var cat = new Ast();
+								cat.Kind = Ast.Cat;
+								cat.Exprs = new Ast[] { result, next };
+								result = cat;
+							}
 						}
 						break;
 					case '|':
@@ -321,10 +351,21 @@ namespace L
 							result = next;
 						else
 						{
-							var cat= new Ast();
-							cat.Kind = Ast.Cat;
-							cat.Exprs = new Ast[] { result, next };
-							result = cat;
+							if (Ast.Cat == result.Kind)
+							{
+								var exprs = new Ast[result.Exprs.Length + 1];
+								Array.Copy(result.Exprs, 0, exprs, 0, result.Exprs.Length);
+								exprs[exprs.Length - 1] = next;
+								result.Exprs = exprs;
+							}
+							else
+							{
+								var cat = new Ast();
+								cat.Kind = Ast.Cat;
+								cat.Exprs = new Ast[] { result, next };
+								result = cat;
+							}
+							
 						}
 						break;
 					default:
@@ -344,10 +385,20 @@ namespace L
 							result = next;
 						else
 						{
-							var cat = new Ast();
-							cat.Kind = Ast.Cat;
-							cat.Exprs = new Ast[] { result, next };
-							result = cat;
+							if (Ast.Cat == result.Kind)
+							{
+								var exprs = new Ast[result.Exprs.Length + 1];
+								Array.Copy(result.Exprs, 0, exprs, 0, result.Exprs.Length);
+								exprs[exprs.Length - 1] = next;
+								result.Exprs = exprs;
+							}
+							else
+							{
+								var cat = new Ast();
+								cat.Kind = Ast.Cat;
+								cat.Exprs = new Ast[] { result, next };
+								result = cat;
+							}
 						}
 						break;
 				}
